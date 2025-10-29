@@ -234,6 +234,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public achievement share endpoint (no auth required)
+  app.get("/api/achievements/share/:userAchievementId", async (req, res) => {
+    try {
+      const { userAchievementId } = req.params;
+      const share = await storage.getAchievementShare(userAchievementId);
+      
+      if (!share) {
+        return res.status(404).json({ error: "Achievement not found" });
+      }
+      
+      res.json(share);
+    } catch (error) {
+      console.error("Error fetching shared achievement:", error);
+      res.status(500).json({ error: "Failed to fetch shared achievement" });
+    }
+  });
+
   // Analytics routes
   app.get("/api/analytics/daily", isAuthenticated, async (req: any, res) => {
     try {

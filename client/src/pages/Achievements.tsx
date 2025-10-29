@@ -1,7 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import type { AchievementWithProgress } from "@shared/schema";
 import {
   Trophy,
@@ -22,6 +33,9 @@ import {
   CircleDot,
   Footprints,
   TrendingUp,
+  Share2,
+  Copy,
+  Check,
   type LucideIcon,
 } from "lucide-react";
 
@@ -151,57 +165,138 @@ export default function Achievements() {
 }
 
 function AchievementCard({ achievement }: { achievement: AchievementWithProgress }) {
+  const { toast } = useToast();
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const Icon = iconMap[achievement.icon] || Trophy;
   const tierColor = tierColors[achievement.tier as keyof typeof tierColors] || tierColors.bronze;
   const tierBg = tierBgColors[achievement.tier as keyof typeof tierBgColors] || tierBgColors.bronze;
 
+  const shareUrl = achievement.userAchievementId
+    ? `${window.location.origin}/share/achievement/${achievement.userAchievementId}`
+    : "";
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast({
+        title: "Link Copied!",
+        description: "Share this achievement with your friends.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy link",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <Card
-      className={`relative overflow-hidden transition-all ${achievement.unlocked ? "hover-elevate" : "opacity-60"}`}
-      data-testid={`card-achievement-${achievement.id}`}
-    >
-      {achievement.unlocked && (
-        <div className={`absolute inset-0 ${tierBg} pointer-events-none`} />
-      )}
-      <CardContent className="relative p-6 space-y-4">
-        <div className="flex items-start justify-between">
-          <div className={`p-3 rounded-lg ${tierBg} border ${tierColor}`}>
-            <Icon className={`h-6 w-6 ${tierColor}`} />
-          </div>
-          <Badge
-            variant="outline"
-            className={`${tierColor} capitalize`}
-            data-testid={`badge-tier-${achievement.tier}`}
-          >
-            {achievement.tier}
-          </Badge>
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="font-semibold text-lg" data-testid={`text-achievement-name-${achievement.id}`}>
-            {achievement.name}
-          </h3>
-          <p className="text-sm text-muted-foreground">{achievement.description}</p>
-        </div>
-
-        {!achievement.unlocked && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">
-                {achievement.progress}/{achievement.requirementValue}
-              </span>
+    <>
+      <Card
+        className={`relative overflow-hidden transition-all ${achievement.unlocked ? "hover-elevate" : "opacity-60"}`}
+        data-testid={`card-achievement-${achievement.id}`}
+      >
+        {achievement.unlocked && (
+          <div className={`absolute inset-0 ${tierBg} pointer-events-none`} />
+        )}
+        <CardContent className="relative p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div className={`p-3 rounded-lg ${tierBg} border ${tierColor}`}>
+              <Icon className={`h-6 w-6 ${tierColor}`} />
             </div>
-            <Progress value={achievement.progressPercent} />
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className={`${tierColor} capitalize`}
+                data-testid={`badge-tier-${achievement.tier}`}
+              >
+                {achievement.tier}
+              </Badge>
+              {achievement.unlocked && achievement.userAchievementId && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={() => setShareDialogOpen(true)}
+                  data-testid={`button-share-${achievement.id}`}
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
-        )}
 
-        {achievement.unlocked && achievement.unlockedAt && (
-          <p className="text-xs text-muted-foreground">
-            Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg" data-testid={`text-achievement-name-${achievement.id}`}>
+              {achievement.name}
+            </h3>
+            <p className="text-sm text-muted-foreground">{achievement.description}</p>
+          </div>
+
+          {!achievement.unlocked && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="font-medium">
+                  {achievement.progress}/{achievement.requirementValue}
+                </span>
+              </div>
+              <Progress value={achievement.progressPercent} />
+            </div>
+          )}
+
+          {achievement.unlocked && achievement.unlockedAt && (
+            <p className="text-xs text-muted-foreground">
+              Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Share Dialog */}
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent data-testid="dialog-share-achievement">
+          <DialogHeader>
+            <DialogTitle>Share Achievement</DialogTitle>
+            <DialogDescription>
+              Share your "{achievement.name}" achievement with friends
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={shareUrl}
+                readOnly
+                className="flex-1"
+                data-testid="input-share-url"
+              />
+              <Button
+                onClick={handleCopyLink}
+                data-testid="button-copy-link"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Anyone with this link can see this achievement and when you unlocked it.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

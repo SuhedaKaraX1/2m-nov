@@ -156,6 +156,7 @@ export type AchievementWithProgress = Achievement & {
   unlockedAt?: string | null;
   progress: number;
   progressPercent: number;
+  userAchievementId?: string | null; // ID for sharing unlocked achievements
 };
 
 // Friendship status types

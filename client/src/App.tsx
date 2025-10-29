@@ -15,6 +15,7 @@ import Analytics from "@/pages/Analytics";
 import CreateChallenge from "@/pages/CreateChallenge";
 import MyChallenges from "@/pages/MyChallenges";
 import Friends from "@/pages/Friends";
+import ShareAchievement from "@/pages/ShareAchievement";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -34,6 +35,10 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes */}
+      <Route path="/share/achievement/:id" component={ShareAchievement} />
+      
+      {/* Auth-dependent routes */}
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (

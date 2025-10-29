@@ -59,6 +59,11 @@ export interface IStorage {
   getUserAchievements(userId: string): Promise<AchievementWithProgress[]>;
   checkAndUnlockAchievements(userId: string): Promise<Achievement[]>;
   unlockAchievement(userId: string, achievementId: string): Promise<UserAchievement>;
+  getAchievementShare(userAchievementId: string): Promise<{
+    achievement: Achievement;
+    user: Pick<User, 'firstName' | 'lastName' | 'profileImageUrl'>;
+    unlockedAt: Date | null;
+  } | null>;
 
   // Analytics
   getDailyStats(userId: string, days: number): Promise<Array<{ date: string; count: number; points: number }>>;
@@ -398,6 +403,7 @@ export class DatabaseStorage implements IStorage {
         unlockedAt: unlocked?.unlockedAt?.toISOString() || null,
         progress: currentProgress,
         progressPercent: Math.min(100, Math.floor((currentProgress / requirementValue) * 100)),
+        userAchievementId: unlocked?.id || null, // Include for sharing
       };
     });
   }
@@ -448,6 +454,40 @@ export class DatabaseStorage implements IStorage {
     }
 
     return newlyUnlocked;
+  }
+
+  async getAchievementShare(userAchievementId: string): Promise<{
+    achievement: Achievement;
+    user: Pick<User, 'firstName' | 'lastName' | 'profileImageUrl'>;
+    unlockedAt: Date | null;
+  } | null> {
+    // Get the user achievement with joined data
+    const [result] = await db
+      .select({
+        achievement: achievements,
+        userFirstName: users.firstName,
+        userLastName: users.lastName,
+        userProfileImageUrl: users.profileImageUrl,
+        unlockedAt: userAchievements.unlockedAt,
+      })
+      .from(userAchievements)
+      .innerJoin(achievements, eq(achievements.id, userAchievements.achievementId))
+      .innerJoin(users, eq(users.id, userAchievements.userId))
+      .where(eq(userAchievements.id, userAchievementId));
+
+    if (!result) {
+      return null;
+    }
+
+    return {
+      achievement: result.achievement,
+      user: {
+        firstName: result.userFirstName,
+        lastName: result.userLastName,
+        profileImageUrl: result.userProfileImageUrl,
+      },
+      unlockedAt: result.unlockedAt,
+    };
   }
 
   // Analytics
