@@ -41,7 +41,7 @@ export default function ChallengeDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/history"] });
       queryClient.invalidateQueries({ queryKey: ["/api/challenges/random"] });
       queryClient.invalidateQueries({ queryKey: ["/api/achievements/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics/daily"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics/daily?days=30"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/category"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/weekly"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics/monthly"] });

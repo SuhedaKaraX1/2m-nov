@@ -29,7 +29,7 @@ const CATEGORY_COLORS = {
 
 export default function Analytics() {
   const { data: dailyStats, isLoading: dailyLoading } = useQuery<Array<{ date: string; count: number; points: number }>>({
-    queryKey: ["/api/analytics/daily", { days: 30 }],
+    queryKey: ["/api/analytics/daily?days=30"],
   });
 
   const { data: categoryDistribution, isLoading: categoryLoading } = useQuery<Array<{ category: string; count: number; percentage: number }>>({

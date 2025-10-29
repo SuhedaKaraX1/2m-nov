@@ -398,7 +398,7 @@ export class DatabaseStorage implements IStorage {
     // Query history for the date range
     const history = await db
       .select({
-        date: sql<string>`DATE(${challengeHistory.completedAt})`,
+        date: sql<string>`DATE(${challengeHistory.completedAt}::timestamptz)`,
         count: sql<number>`COUNT(*)`,
         points: sql<number>`SUM(${challengeHistory.pointsEarned})`,
       })
@@ -406,11 +406,11 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(challengeHistory.userId, userId),
-          sql`${challengeHistory.completedAt} >= ${startDate.toISOString()}`
+          sql`${challengeHistory.completedAt}::timestamptz >= ${startDate.toISOString()}::timestamptz`
         )
       )
-      .groupBy(sql`DATE(${challengeHistory.completedAt})`)
-      .orderBy(sql`DATE(${challengeHistory.completedAt})`);
+      .groupBy(sql`DATE(${challengeHistory.completedAt}::timestamptz)`)
+      .orderBy(sql`DATE(${challengeHistory.completedAt}::timestamptz)`);
 
     // Fill in missing dates with zero values
     const result: Array<{ date: string; count: number; points: number }> = [];
@@ -452,9 +452,12 @@ export class DatabaseStorage implements IStorage {
 
   async getWeeklyTrend(userId: string): Promise<Array<{ week: string; count: number; points: number }>> {
     // Get last 12 weeks
+    const twelveWeeksAgo = new Date();
+    twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 84); // 12 weeks = 84 days
+    
     const weeks = await db
       .select({
-        week: sql<string>`TO_CHAR(DATE_TRUNC('week', ${challengeHistory.completedAt}::timestamp), 'YYYY-MM-DD')`,
+        week: sql<string>`TO_CHAR(DATE_TRUNC('week', ${challengeHistory.completedAt}::timestamptz), 'YYYY-MM-DD')`,
         count: sql<number>`COUNT(*)`,
         points: sql<number>`SUM(${challengeHistory.pointsEarned})`,
       })
@@ -462,11 +465,11 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(challengeHistory.userId, userId),
-          sql`${challengeHistory.completedAt} >= NOW() - INTERVAL '12 weeks'`
+          sql`${challengeHistory.completedAt}::timestamptz >= ${twelveWeeksAgo.toISOString()}::timestamptz`
         )
       )
-      .groupBy(sql`DATE_TRUNC('week', ${challengeHistory.completedAt}::timestamp)`)
-      .orderBy(sql`DATE_TRUNC('week', ${challengeHistory.completedAt}::timestamp)`);
+      .groupBy(sql`DATE_TRUNC('week', ${challengeHistory.completedAt}::timestamptz)`)
+      .orderBy(sql`DATE_TRUNC('week', ${challengeHistory.completedAt}::timestamptz)`);
 
     return weeks.map(w => ({
       week: w.week,
@@ -477,9 +480,12 @@ export class DatabaseStorage implements IStorage {
 
   async getMonthlyTrend(userId: string): Promise<Array<{ month: string; count: number; points: number }>> {
     // Get last 12 months
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    
     const months = await db
       .select({
-        month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${challengeHistory.completedAt}::timestamp), 'YYYY-MM')`,
+        month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${challengeHistory.completedAt}::timestamptz), 'YYYY-MM')`,
         count: sql<number>`COUNT(*)`,
         points: sql<number>`SUM(${challengeHistory.pointsEarned})`,
       })
@@ -487,11 +493,11 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(challengeHistory.userId, userId),
-          sql`${challengeHistory.completedAt} >= NOW() - INTERVAL '12 months'`
+          sql`${challengeHistory.completedAt}::timestamptz >= ${twelveMonthsAgo.toISOString()}::timestamptz`
         )
       )
-      .groupBy(sql`DATE_TRUNC('month', ${challengeHistory.completedAt}::timestamp)`)
-      .orderBy(sql`DATE_TRUNC('month', ${challengeHistory.completedAt}::timestamp)`);
+      .groupBy(sql`DATE_TRUNC('month', ${challengeHistory.completedAt}::timestamptz)`)
+      .orderBy(sql`DATE_TRUNC('month', ${challengeHistory.completedAt}::timestamptz)`);
 
     return months.map(m => ({
       month: m.month,

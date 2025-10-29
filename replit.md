@@ -2,7 +2,7 @@
 
 ## Overview
 
-2Mins is a wellness and productivity application that helps users build better habits through quick, 2-minute challenges. The app focuses on five key life areas: physical health, mental wellness, learning, finance, and relationships. Users complete challenges, track their progress through streaks and points, and build sustainable habits through micro-actions.
+2Mins is a wellness and productivity application that helps users build better habits through quick, 2-minute challenges. The app focuses on five key life areas: physical health, mental wellness, learning, finance, and relationships. Users complete challenges, track their progress through streaks and points, earn achievement badges, view detailed analytics, and build sustainable habits through micro-actions.
 
 The application is built as a full-stack web application using React for the frontend and Express for the backend, with a dark-first Material Design aesthetic optimized for utility and quick interactions.
 
@@ -36,10 +36,18 @@ Preferred communication style: Simple, everyday language.
 - All challenges (`/challenges`)
 - User progress (`/progress`)
 - Challenge history (`/history`)
+- Achievements (`/achievements`)
+- Analytics dashboard (`/analytics`)
 
 **Key Features**:
 - Category-based challenge browsing (5 categories: physical, mental, learning, finance, relationships)
 - Circular timer component for 2-minute challenge tracking
+- Achievement badges system with 19 predefined achievements across 4 tiers (Bronze, Silver, Gold, Platinum)
+- Analytics dashboard with Recharts visualizations:
+  - Daily activity charts (bar and line charts)
+  - Category distribution (pie chart)
+  - Weekly and monthly trend analysis
+  - Summary metrics (total challenges, last 30 days, active categories)
 - Stats and progress visualization
 - Streak tracking system
 - Points/gamification system
@@ -56,6 +64,12 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/challenges/:id/complete` - Complete a challenge
 - `GET /api/progress` - Get user progress
 - `GET /api/history` - Get challenge history
+- `GET /api/achievements` - List all achievements
+- `GET /api/achievements/user` - Get user's achievement progress and unlocked achievements
+- `GET /api/analytics/daily?days=30` - Get daily challenge statistics (count and points) for last N days
+- `GET /api/analytics/category` - Get category distribution with percentages
+- `GET /api/analytics/weekly` - Get weekly aggregated statistics for last 12 weeks
+- `GET /api/analytics/monthly` - Get monthly aggregated statistics for last 12 months
 
 **Development Mode**: Custom Vite integration for hot module replacement and development experience. The Express server acts as middleware, with Vite handling the frontend in development mode.
 
