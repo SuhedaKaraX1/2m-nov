@@ -157,3 +157,41 @@ export type AchievementWithProgress = Achievement & {
   progress: number;
   progressPercent: number;
 };
+
+// Friendship status types
+export const friendshipStatuses = ["pending", "accepted", "declined"] as const;
+export type FriendshipStatus = typeof friendshipStatuses[number];
+
+// Friendships table - tracks friend relationships
+export const friendships = pgTable("friendships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requesterId: varchar("requester_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  receiverId: varchar("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"), // "pending", "accepted", "declined"
+  createdAt: timestamp("created_at").defaultNow(),
+  respondedAt: timestamp("responded_at"),
+}, (table) => [
+  index("idx_friendships_requester").on(table.requesterId),
+  index("idx_friendships_receiver").on(table.receiverId),
+]);
+
+export const insertFriendshipSchema = createInsertSchema(friendships).omit({
+  id: true,
+  createdAt: true,
+  respondedAt: true,
+});
+
+export type InsertFriendship = z.infer<typeof insertFriendshipSchema>;
+export type Friendship = typeof friendships.$inferSelect;
+
+// Friend with user details for display
+export type FriendWithDetails = {
+  friendshipId: string;
+  userId: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
+  status: FriendshipStatus;
+  createdAt: Date | null;
+};

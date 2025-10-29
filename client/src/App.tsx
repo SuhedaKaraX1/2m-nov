@@ -14,6 +14,7 @@ import Achievements from "@/pages/Achievements";
 import Analytics from "@/pages/Analytics";
 import CreateChallenge from "@/pages/CreateChallenge";
 import MyChallenges from "@/pages/MyChallenges";
+import Friends from "@/pages/Friends";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -49,6 +50,7 @@ function Router() {
           <Route path="/edit-challenge/:id">
             {(params) => <CreateChallenge editId={params.id} />}
           </Route>
+          <Route path="/friends" component={Friends} />
         </>
       )}
       <Route component={NotFound} />

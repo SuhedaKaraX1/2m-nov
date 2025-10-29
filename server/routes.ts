@@ -276,6 +276,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Friends routes
+  app.post("/api/friends/request", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const friendship = await storage.sendFriendRequest(userId, email);
+      
+      if (!friendship) {
+        return res.status(400).json({ error: "Unable to send friend request. User may not exist or friendship already exists." });
+      }
+
+      res.status(201).json(friendship);
+    } catch (error) {
+      console.error("Error sending friend request:", error);
+      res.status(500).json({ error: "Failed to send friend request" });
+    }
+  });
+
+  app.patch("/api/friends/:id/accept", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const friendshipId = req.params.id;
+
+      const friendship = await storage.acceptFriendRequest(friendshipId, userId);
+      
+      if (!friendship) {
+        return res.status(404).json({ error: "Friend request not found or already responded to" });
+      }
+
+      res.json(friendship);
+    } catch (error) {
+      console.error("Error accepting friend request:", error);
+      res.status(500).json({ error: "Failed to accept friend request" });
+    }
+  });
+
+  app.patch("/api/friends/:id/decline", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const friendshipId = req.params.id;
+
+      const success = await storage.declineFriendRequest(friendshipId, userId);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Friend request not found or already responded to" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error declining friend request:", error);
+      res.status(500).json({ error: "Failed to decline friend request" });
+    }
+  });
+
+  app.get("/api/friends", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const friends = await storage.getFriends(userId);
+      res.json(friends);
+    } catch (error) {
+      console.error("Error fetching friends:", error);
+      res.status(500).json({ error: "Failed to fetch friends" });
+    }
+  });
+
+  app.get("/api/friends/pending", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const pending = await storage.getPendingRequests(userId);
+      res.json(pending);
+    } catch (error) {
+      console.error("Error fetching pending requests:", error);
+      res.status(500).json({ error: "Failed to fetch pending requests" });
+    }
+  });
+
+  app.delete("/api/friends/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const friendshipId = req.params.id;
+
+      const success = await storage.unfriend(friendshipId, userId);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Friendship not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error unfriending:", error);
+      res.status(500).json({ error: "Failed to unfriend" });
+    }
+  });
+
+  app.get("/api/friends/activity", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const activity = await storage.getFriendActivity(userId, limit);
+      res.json(activity);
+    } catch (error) {
+      console.error("Error fetching friend activity:", error);
+      res.status(500).json({ error: "Failed to fetch friend activity" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
