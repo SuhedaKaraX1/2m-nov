@@ -44,6 +44,9 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-foreground" data-testid="text-app-title">2Mins</h1>
             </div>
             <nav className="flex gap-2">
+              <Button variant="ghost" asChild data-testid="link-achievements">
+                <Link href="/achievements">Achievements</Link>
+              </Button>
               <Button variant="ghost" asChild data-testid="link-progress">
                 <Link href="/progress">Progress</Link>
               </Button>

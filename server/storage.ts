@@ -8,10 +8,17 @@ import {
   type ChallengeWithDetails,
   type User,
   type UpsertUser,
+  type Achievement,
+  type InsertAchievement,
+  type UserAchievement,
+  type InsertUserAchievement,
+  type AchievementWithProgress,
   challenges,
   userProgress,
   challengeHistory,
   users,
+  achievements,
+  userAchievements,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -39,6 +46,12 @@ export interface IStorage {
   getAllHistory(userId: string): Promise<ChallengeWithDetails[]>;
   addHistoryEntry(userId: string, entry: InsertChallengeHistory): Promise<ChallengeHistory>;
   getHistoryByDate(userId: string, date: string): Promise<ChallengeHistory[]>;
+
+  // Achievements
+  getAllAchievements(): Promise<Achievement[]>;
+  getUserAchievements(userId: string): Promise<AchievementWithProgress[]>;
+  checkAndUnlockAchievements(userId: string): Promise<Achievement[]>;
+  unlockAchievement(userId: string, achievementId: string): Promise<UserAchievement>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -243,6 +256,130 @@ export class DatabaseStorage implements IStorage {
           sql`${challengeHistory.completedAt} LIKE ${date + '%'}`
         )
       );
+  }
+
+  // Achievements
+  async getAllAchievements(): Promise<Achievement[]> {
+    return await db
+      .select()
+      .from(achievements)
+      .orderBy(achievements.sortOrder);
+  }
+
+  async getUserAchievements(userId: string): Promise<AchievementWithProgress[]> {
+    // Get all achievements
+    const allAchievements = await this.getAllAchievements();
+    
+    // Get user's unlocked achievements
+    const unlockedAchievements = await db
+      .select()
+      .from(userAchievements)
+      .where(eq(userAchievements.userId, userId));
+
+    // Get user progress for calculating progress on locked achievements
+    const progress = await this.getUserProgress(userId);
+    
+    // Get category-specific progress
+    const categoryProgress = await db
+      .select({
+        category: challenges.category,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(challengeHistory)
+      .innerJoin(challenges, eq(challengeHistory.challengeId, challenges.id))
+      .where(eq(challengeHistory.userId, userId))
+      .groupBy(challenges.category);
+
+    const categoryMap = new Map(categoryProgress.map(c => [c.category, Number(c.count)]));
+
+    // Combine achievement data with unlock status and progress
+    return allAchievements.map(achievement => {
+      const unlocked = unlockedAchievements.find(ua => ua.achievementId === achievement.id);
+      
+      let currentProgress = 0;
+      let requirementValue = achievement.requirementValue;
+
+      // Calculate progress based on requirement type
+      switch (achievement.requirementType) {
+        case "challenges_completed":
+          currentProgress = progress.totalChallengesCompleted;
+          break;
+        case "streak_days":
+          currentProgress = progress.currentStreak;
+          break;
+        case "total_points":
+          currentProgress = progress.totalPoints;
+          break;
+        case "category_challenges":
+          const category = (achievement.requirementMeta as { category?: string })?.category;
+          if (category) {
+            currentProgress = categoryMap.get(category) || 0;
+          }
+          break;
+        case "all_categories":
+          // Check if all categories have at least requirementValue completions
+          const allCategoriesMet = ["physical", "mental", "learning", "finance", "relationships"]
+            .every(cat => (categoryMap.get(cat) || 0) >= requirementValue);
+          currentProgress = allCategoriesMet ? requirementValue : 0;
+          break;
+      }
+
+      return {
+        ...achievement,
+        unlocked: !!unlocked,
+        unlockedAt: unlocked?.unlockedAt?.toISOString() || null,
+        progress: currentProgress,
+        progressPercent: Math.min(100, Math.floor((currentProgress / requirementValue) * 100)),
+      };
+    });
+  }
+
+  async unlockAchievement(userId: string, achievementId: string): Promise<UserAchievement> {
+    // Check if already unlocked
+    const existing = await db
+      .select()
+      .from(userAchievements)
+      .where(
+        and(
+          eq(userAchievements.userId, userId),
+          eq(userAchievements.achievementId, achievementId)
+        )
+      );
+
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    // Unlock the achievement
+    const [unlocked] = await db
+      .insert(userAchievements)
+      .values({
+        userId,
+        achievementId,
+      })
+      .returning();
+
+    return unlocked;
+  }
+
+  async checkAndUnlockAchievements(userId: string): Promise<Achievement[]> {
+    const userAchievementsWithProgress = await this.getUserAchievements(userId);
+    const newlyUnlocked: Achievement[] = [];
+
+    for (const achievement of userAchievementsWithProgress) {
+      // Skip if already unlocked
+      if (achievement.unlocked) {
+        continue;
+      }
+
+      // Check if requirement is met
+      if (achievement.progress >= achievement.requirementValue) {
+        await this.unlockAchievement(userId, achievement.id);
+        newlyUnlocked.push(achievement);
+      }
+    }
+
+    return newlyUnlocked;
   }
 }
 
@@ -639,22 +776,236 @@ export const challengeSeedData: InsertChallenge[] = [
   },
 ];
 
+// Achievement seed data
+const achievementSeedData: InsertAchievement[] = [
+  // Completion Achievements
+  {
+    name: "First Steps",
+    description: "Complete your first challenge",
+    icon: "Footprints",
+    category: "completion",
+    requirementType: "challenges_completed",
+    requirementValue: 1,
+    tier: "bronze",
+    sortOrder: 1,
+  },
+  {
+    name: "Getting Started",
+    description: "Complete 5 challenges",
+    icon: "TrendingUp",
+    category: "completion",
+    requirementType: "challenges_completed",
+    requirementValue: 5,
+    tier: "bronze",
+    sortOrder: 2,
+  },
+  {
+    name: "Consistent",
+    description: "Complete 10 challenges",
+    icon: "Target",
+    category: "completion",
+    requirementType: "challenges_completed",
+    requirementValue: 10,
+    tier: "silver",
+    sortOrder: 3,
+  },
+  {
+    name: "Dedicated",
+    description: "Complete 50 challenges",
+    icon: "Award",
+    category: "completion",
+    requirementType: "challenges_completed",
+    requirementValue: 50,
+    tier: "gold",
+    sortOrder: 4,
+  },
+  {
+    name: "Champion",
+    description: "Complete 100 challenges",
+    icon: "Trophy",
+    category: "completion",
+    requirementType: "challenges_completed",
+    requirementValue: 100,
+    tier: "platinum",
+    sortOrder: 5,
+  },
+
+  // Streak Achievements
+  {
+    name: "On a Roll",
+    description: "Maintain a 3-day streak",
+    icon: "Flame",
+    category: "streak",
+    requirementType: "streak_days",
+    requirementValue: 3,
+    tier: "bronze",
+    sortOrder: 6,
+  },
+  {
+    name: "Week Warrior",
+    description: "Maintain a 7-day streak",
+    icon: "Zap",
+    category: "streak",
+    requirementType: "streak_days",
+    requirementValue: 7,
+    tier: "silver",
+    sortOrder: 7,
+  },
+  {
+    name: "Streak Master",
+    description: "Maintain a 30-day streak",
+    icon: "Crown",
+    category: "streak",
+    requirementType: "streak_days",
+    requirementValue: 30,
+    tier: "gold",
+    sortOrder: 8,
+  },
+  {
+    name: "Unstoppable",
+    description: "Maintain a 100-day streak",
+    icon: "Sparkles",
+    category: "streak",
+    requirementType: "streak_days",
+    requirementValue: 100,
+    tier: "platinum",
+    sortOrder: 9,
+  },
+
+  // Points Achievements
+  {
+    name: "Points Collector",
+    description: "Earn 100 total points",
+    icon: "Coins",
+    category: "points",
+    requirementType: "total_points",
+    requirementValue: 100,
+    tier: "bronze",
+    sortOrder: 10,
+  },
+  {
+    name: "Points Master",
+    description: "Earn 500 total points",
+    icon: "Gem",
+    category: "points",
+    requirementType: "total_points",
+    requirementValue: 500,
+    tier: "silver",
+    sortOrder: 11,
+  },
+  {
+    name: "Points Champion",
+    description: "Earn 1000 total points",
+    icon: "Star",
+    category: "points",
+    requirementType: "total_points",
+    requirementValue: 1000,
+    tier: "gold",
+    sortOrder: 12,
+  },
+  {
+    name: "Points Legend",
+    description: "Earn 5000 total points",
+    icon: "Crown",
+    category: "points",
+    requirementType: "total_points",
+    requirementValue: 5000,
+    tier: "platinum",
+    sortOrder: 13,
+  },
+
+  // Category-Specific Achievements
+  {
+    name: "Physical Enthusiast",
+    description: "Complete 10 physical challenges",
+    icon: "Activity",
+    category: "category_specific",
+    requirementType: "category_challenges",
+    requirementValue: 10,
+    requirementMeta: { category: "physical" },
+    tier: "silver",
+    sortOrder: 14,
+  },
+  {
+    name: "Mental Wellness",
+    description: "Complete 10 mental challenges",
+    icon: "Brain",
+    category: "category_specific",
+    requirementType: "category_challenges",
+    requirementValue: 10,
+    requirementMeta: { category: "mental" },
+    tier: "silver",
+    sortOrder: 15,
+  },
+  {
+    name: "Lifelong Learner",
+    description: "Complete 10 learning challenges",
+    icon: "BookOpen",
+    category: "category_specific",
+    requirementType: "category_challenges",
+    requirementValue: 10,
+    requirementMeta: { category: "learning" },
+    tier: "silver",
+    sortOrder: 16,
+  },
+  {
+    name: "Finance Guru",
+    description: "Complete 10 finance challenges",
+    icon: "DollarSign",
+    category: "category_specific",
+    requirementType: "category_challenges",
+    requirementValue: 10,
+    requirementMeta: { category: "finance" },
+    tier: "silver",
+    sortOrder: 17,
+  },
+  {
+    name: "Relationship Builder",
+    description: "Complete 10 relationships challenges",
+    icon: "Heart",
+    category: "category_specific",
+    requirementType: "category_challenges",
+    requirementValue: 10,
+    requirementMeta: { category: "relationships" },
+    tier: "silver",
+    sortOrder: 18,
+  },
+
+  // Well-Rounded Achievement
+  {
+    name: "Well-Rounded",
+    description: "Complete at least 5 challenges in each category",
+    icon: "CircleDot",
+    category: "category_master",
+    requirementType: "all_categories",
+    requirementValue: 5,
+    tier: "gold",
+    sortOrder: 19,
+  },
+];
+
 // Initialize database with seed data (idempotent - checks before inserting)
 export async function seedDatabase() {
   try {
-    // Check if we already have challenges
+    // Seed challenges
     const existingChallenges = await db.select().from(challenges).limit(1);
-    if (existingChallenges.length > 0) {
+    if (existingChallenges.length === 0) {
+      console.log("Seeding database with challenges...");
+      await db.insert(challenges).values(challengeSeedData);
+      console.log(`Successfully seeded ${challengeSeedData.length} challenges`);
+    } else {
       console.log("Database already seeded with challenges");
-      return; // Already seeded
     }
 
-    console.log("Seeding database with challenges...");
-    
-    // Batch insert all challenges at once
-    await db.insert(challenges).values(challengeSeedData);
-    
-    console.log(`Successfully seeded ${challengeSeedData.length} challenges`);
+    // Seed achievements
+    const existingAchievements = await db.select().from(achievements).limit(1);
+    if (existingAchievements.length === 0) {
+      console.log("Seeding database with achievements...");
+      await db.insert(achievements).values(achievementSeedData);
+      console.log(`Successfully seeded ${achievementSeedData.length} achievements`);
+    } else {
+      console.log("Database already seeded with achievements");
+    }
   } catch (error) {
     console.error("Error seeding database:", error);
     // Don't throw - allow app to start even if seeding fails

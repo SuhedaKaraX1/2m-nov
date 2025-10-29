@@ -40,11 +40,26 @@ export default function ChallengeDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
       queryClient.invalidateQueries({ queryKey: ["/api/history"] });
       queryClient.invalidateQueries({ queryKey: ["/api/challenges/random"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/achievements/user"] });
       
+      // Show challenge completion toast
       toast({
         title: "Challenge Complete!",
         description: `You earned ${data.pointsEarned || challenge?.points} points!`,
       });
+
+      // Show achievement unlock toasts
+      if (data.newAchievements && data.newAchievements.length > 0) {
+        data.newAchievements.forEach((achievement: any, index: number) => {
+          setTimeout(() => {
+            toast({
+              title: "Achievement Unlocked!",
+              description: `${achievement.name}: ${achievement.description}`,
+              duration: 5000,
+            });
+          }, (index + 1) * 1000); // Stagger notifications by 1 second
+        });
+      }
     },
     onError: (error: any) => {
       toast({

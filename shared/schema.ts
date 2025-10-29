@@ -105,3 +105,55 @@ export type ChallengeWithDetails = Challenge & {
   timeSpent?: number;
   pointsEarned?: number;
 };
+
+// Achievement tiers for visual distinction
+export const achievementTiers = ["bronze", "silver", "gold", "platinum"] as const;
+export type AchievementTier = typeof achievementTiers[number];
+
+// Achievements table - all available achievements
+export const achievements = pgTable("achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull(), // lucide-react icon name or emoji
+  category: text("category").notNull(), // "completion", "streak", "points", "category_master"
+  requirementType: text("requirement_type").notNull(), // "challenges_completed", "streak_days", "total_points", etc.
+  requirementValue: integer("requirement_value").notNull(), // threshold value
+  requirementMeta: jsonb("requirement_meta"), // optional metadata (e.g., {category: "physical"})
+  tier: text("tier").notNull(), // "bronze", "silver", "gold", "platinum"
+  sortOrder: integer("sort_order").notNull().default(0), // for display ordering
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAchievementSchema = createInsertSchema(achievements).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+export type Achievement = typeof achievements.$inferSelect;
+
+// User achievements - tracks which achievements users have unlocked
+export const userAchievements = pgTable("user_achievements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  achievementId: varchar("achievement_id").notNull().references(() => achievements.id, { onDelete: "cascade" }),
+  unlockedAt: timestamp("unlocked_at").defaultNow(),
+  progress: integer("progress").default(0), // current progress (used before unlocking)
+});
+
+export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({
+  id: true,
+  unlockedAt: true,
+});
+
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+
+// Achievement with unlock status for a user
+export type AchievementWithProgress = Achievement & {
+  unlocked: boolean;
+  unlockedAt?: string | null;
+  progress: number;
+  progressPercent: number;
+};

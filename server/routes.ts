@@ -98,10 +98,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pointsEarned: challenge.points,
       });
 
+      // Check for newly unlocked achievements
+      const newAchievements = await storage.checkAndUnlockAchievements(userId);
+
       res.json({
         success: true,
         historyEntry,
         pointsEarned: challenge.points,
+        newAchievements,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -128,6 +132,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(history);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch history" });
+    }
+  });
+
+  // Achievement routes
+  app.get("/api/achievements", async (_req, res) => {
+    try {
+      const achievements = await storage.getAllAchievements();
+      res.json(achievements);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch achievements" });
+    }
+  });
+
+  app.get("/api/achievements/user", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const achievements = await storage.getUserAchievements(userId);
+      res.json(achievements);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch user achievements" });
+    }
+  });
+
+  app.post("/api/achievements/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const newAchievements = await storage.checkAndUnlockAchievements(userId);
+      res.json({ newAchievements });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check achievements" });
     }
   });
 

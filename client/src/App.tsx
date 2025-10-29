@@ -10,6 +10,7 @@ import ChallengeDetail from "@/pages/ChallengeDetail";
 import Challenges from "@/pages/Challenges";
 import Progress from "@/pages/Progress";
 import History from "@/pages/History";
+import Achievements from "@/pages/Achievements";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
           <Route path="/challenges" component={Challenges} />
           <Route path="/progress" component={Progress} />
           <Route path="/history" component={History} />
+          <Route path="/achievements" component={Achievements} />
         </>
       )}
       <Route component={NotFound} />
