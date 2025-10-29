@@ -47,10 +47,12 @@ export function CircularTimer({ duration, onComplete, onTimeUpdate }: CircularTi
   }, [isRunning, timeRemaining, onComplete, onTimeUpdate]);
 
   const handleToggle = () => {
+    if (isComplete) return; // Don't allow toggling after completion
     setIsRunning(!isRunning);
   };
 
   const handleReset = () => {
+    if (isComplete) return; // Don't allow reset after completion
     setIsRunning(false);
     setIsComplete(false);
     setTimeRemaining(duration);

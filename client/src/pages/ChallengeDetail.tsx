@@ -17,6 +17,7 @@ export default function ChallengeDetail() {
   const { toast } = useToast();
   const [isComplete, setIsComplete] = useState(false);
   const [timeSpent, setTimeSpent] = useState(0);
+  const [pointsEarned, setPointsEarned] = useState(0);
 
   const challengeId = params?.id;
 
@@ -31,20 +32,34 @@ export default function ChallengeDetail() {
     mutationFn: async (data: { timeSpent: number }) => {
       return apiRequest("POST", `/api/challenges/${challengeId}/complete`, data);
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      setPointsEarned(data.pointsEarned || challenge?.points || 0);
+      setIsComplete(true);
+      
+      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
       queryClient.invalidateQueries({ queryKey: ["/api/history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/challenges/random"] });
+      
       toast({
         title: "Challenge Complete!",
-        description: `You earned ${challenge?.points} points!`,
+        description: `You earned ${data.pointsEarned || challenge?.points} points!`,
       });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to complete challenge. Please try again.",
+        variant: "destructive",
+      });
+      // Reset completion state on error
+      setIsComplete(false);
     },
   });
 
   const handleComplete = () => {
     const totalTime = 120 - timeSpent;
     completeMutation.mutate({ timeSpent: totalTime });
-    setIsComplete(true);
   };
 
   const handleTimeUpdate = (remaining: number) => {
@@ -134,14 +149,22 @@ export default function ChallengeDetail() {
             />
           ) : (
             <div className="text-center py-12" data-testid="completion-message">
-              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6 animate-in zoom-in duration-500">
                 <CheckCircle2 className="h-12 w-12 text-primary" />
               </div>
-              <h2 className="text-3xl font-bold text-foreground mb-2" data-testid="text-completion-title">Well Done!</h2>
-              <p className="text-muted-foreground mb-8" data-testid="text-completion-message">
-                You've completed this challenge and earned {challenge.points} points!
+              <h2 className="text-3xl font-bold text-foreground mb-2 animate-in fade-in slide-in-from-bottom-4 duration-700" data-testid="text-completion-title">
+                Well Done!
+              </h2>
+              <p className="text-muted-foreground mb-2 animate-in fade-in duration-1000" data-testid="text-completion-message">
+                You've completed this challenge and earned <span className="font-bold text-primary">{pointsEarned || challenge.points} points</span>!
               </p>
-              <div className="flex gap-3 justify-center">
+              {completeMutation.isPending && (
+                <p className="text-sm text-muted-foreground mb-8">Updating your progress...</p>
+              )}
+              {!completeMutation.isPending && (
+                <p className="text-sm text-muted-foreground mb-8">Your streak and stats have been updated</p>
+              )}
+              <div className="flex gap-3 justify-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
                 <Button onClick={handleBack} data-testid="button-back-home">
                   Back to Home
                 </Button>

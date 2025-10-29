@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { ChallengeCard } from "@/components/ChallengeCard";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,11 @@ export default function Challenges() {
   const [selectedCategory, setSelectedCategory] = useState<ChallengeCategory | "all">(
     categoryParam || "all"
   );
+
+  // Sync state with URL parameter when it changes
+  useEffect(() => {
+    setSelectedCategory(categoryParam || "all");
+  }, [categoryParam]);
 
   // Fetch all challenges
   const { data: challenges, isLoading } = useQuery<Challenge[]>({
@@ -66,7 +71,10 @@ export default function Challenges() {
             <Badge
               variant={selectedCategory === "all" ? "default" : "outline"}
               className="cursor-pointer hover-elevate active-elevate-2"
-              onClick={() => setSelectedCategory("all")}
+              onClick={() => {
+                setSelectedCategory("all");
+                setLocation("/challenges");
+              }}
               data-testid="filter-all"
             >
               All
@@ -76,7 +84,10 @@ export default function Challenges() {
                 key={cat}
                 variant={selectedCategory === cat ? "default" : "outline"}
                 className="cursor-pointer hover-elevate active-elevate-2"
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setLocation(`/challenges?category=${cat}`);
+                }}
                 data-testid={`filter-${cat}`}
               >
                 {categoryConfig[cat].label}
