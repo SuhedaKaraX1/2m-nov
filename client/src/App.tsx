@@ -11,6 +11,7 @@ import Challenges from "@/pages/Challenges";
 import Progress from "@/pages/Progress";
 import History from "@/pages/History";
 import Achievements from "@/pages/Achievements";
+import Analytics from "@/pages/Analytics";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -40,6 +41,7 @@ function Router() {
           <Route path="/progress" component={Progress} />
           <Route path="/history" component={History} />
           <Route path="/achievements" component={Achievements} />
+          <Route path="/analytics" component={Analytics} />
         </>
       )}
       <Route component={NotFound} />

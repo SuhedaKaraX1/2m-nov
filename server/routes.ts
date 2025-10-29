@@ -165,6 +165,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Analytics routes
+  app.get("/api/analytics/daily", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const days = parseInt(req.query.days as string) || 30;
+      const stats = await storage.getDailyStats(userId, days);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch daily stats" });
+    }
+  });
+
+  app.get("/api/analytics/category", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const distribution = await storage.getCategoryDistribution(userId);
+      res.json(distribution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch category distribution" });
+    }
+  });
+
+  app.get("/api/analytics/weekly", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const trend = await storage.getWeeklyTrend(userId);
+      res.json(trend);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch weekly trend" });
+    }
+  });
+
+  app.get("/api/analytics/monthly", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const trend = await storage.getMonthlyTrend(userId);
+      res.json(trend);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch monthly trend" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

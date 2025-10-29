@@ -52,6 +52,12 @@ export interface IStorage {
   getUserAchievements(userId: string): Promise<AchievementWithProgress[]>;
   checkAndUnlockAchievements(userId: string): Promise<Achievement[]>;
   unlockAchievement(userId: string, achievementId: string): Promise<UserAchievement>;
+
+  // Analytics
+  getDailyStats(userId: string, days: number): Promise<Array<{ date: string; count: number; points: number }>>;
+  getCategoryDistribution(userId: string): Promise<Array<{ category: string; count: number; percentage: number }>>;
+  getWeeklyTrend(userId: string): Promise<Array<{ week: string; count: number; points: number }>>;
+  getMonthlyTrend(userId: string): Promise<Array<{ month: string; count: number; points: number }>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -380,6 +386,118 @@ export class DatabaseStorage implements IStorage {
     }
 
     return newlyUnlocked;
+  }
+
+  // Analytics
+  async getDailyStats(userId: string, days: number): Promise<Array<{ date: string; count: number; points: number }>> {
+    // Get the date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    // Query history for the date range
+    const history = await db
+      .select({
+        date: sql<string>`DATE(${challengeHistory.completedAt})`,
+        count: sql<number>`COUNT(*)`,
+        points: sql<number>`SUM(${challengeHistory.pointsEarned})`,
+      })
+      .from(challengeHistory)
+      .where(
+        and(
+          eq(challengeHistory.userId, userId),
+          sql`${challengeHistory.completedAt} >= ${startDate.toISOString()}`
+        )
+      )
+      .groupBy(sql`DATE(${challengeHistory.completedAt})`)
+      .orderBy(sql`DATE(${challengeHistory.completedAt})`);
+
+    // Fill in missing dates with zero values
+    const result: Array<{ date: string; count: number; points: number }> = [];
+    for (let i = 0; i < days; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (days - 1 - i));
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const existing = history.find(h => h.date === dateStr);
+      result.push({
+        date: dateStr,
+        count: existing ? Number(existing.count) : 0,
+        points: existing ? Number(existing.points) : 0,
+      });
+    }
+
+    return result;
+  }
+
+  async getCategoryDistribution(userId: string): Promise<Array<{ category: string; count: number; percentage: number }>> {
+    const distribution = await db
+      .select({
+        category: challenges.category,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(challengeHistory)
+      .innerJoin(challenges, eq(challengeHistory.challengeId, challenges.id))
+      .where(eq(challengeHistory.userId, userId))
+      .groupBy(challenges.category);
+
+    const total = distribution.reduce((sum, item) => sum + Number(item.count), 0);
+
+    return distribution.map(item => ({
+      category: item.category,
+      count: Number(item.count),
+      percentage: total > 0 ? Math.round((Number(item.count) / total) * 100) : 0,
+    }));
+  }
+
+  async getWeeklyTrend(userId: string): Promise<Array<{ week: string; count: number; points: number }>> {
+    // Get last 12 weeks
+    const weeks = await db
+      .select({
+        week: sql<string>`TO_CHAR(DATE_TRUNC('week', ${challengeHistory.completedAt}::timestamp), 'YYYY-MM-DD')`,
+        count: sql<number>`COUNT(*)`,
+        points: sql<number>`SUM(${challengeHistory.pointsEarned})`,
+      })
+      .from(challengeHistory)
+      .where(
+        and(
+          eq(challengeHistory.userId, userId),
+          sql`${challengeHistory.completedAt} >= NOW() - INTERVAL '12 weeks'`
+        )
+      )
+      .groupBy(sql`DATE_TRUNC('week', ${challengeHistory.completedAt}::timestamp)`)
+      .orderBy(sql`DATE_TRUNC('week', ${challengeHistory.completedAt}::timestamp)`);
+
+    return weeks.map(w => ({
+      week: w.week,
+      count: Number(w.count),
+      points: Number(w.points),
+    }));
+  }
+
+  async getMonthlyTrend(userId: string): Promise<Array<{ month: string; count: number; points: number }>> {
+    // Get last 12 months
+    const months = await db
+      .select({
+        month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${challengeHistory.completedAt}::timestamp), 'YYYY-MM')`,
+        count: sql<number>`COUNT(*)`,
+        points: sql<number>`SUM(${challengeHistory.pointsEarned})`,
+      })
+      .from(challengeHistory)
+      .where(
+        and(
+          eq(challengeHistory.userId, userId),
+          sql`${challengeHistory.completedAt} >= NOW() - INTERVAL '12 months'`
+        )
+      )
+      .groupBy(sql`DATE_TRUNC('month', ${challengeHistory.completedAt}::timestamp)`)
+      .orderBy(sql`DATE_TRUNC('month', ${challengeHistory.completedAt}::timestamp)`);
+
+    return months.map(m => ({
+      month: m.month,
+      count: Number(m.count),
+      points: Number(m.points),
+    }));
   }
 }
 
