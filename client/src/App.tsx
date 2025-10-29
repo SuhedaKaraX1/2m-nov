@@ -12,6 +12,8 @@ import Progress from "@/pages/Progress";
 import History from "@/pages/History";
 import Achievements from "@/pages/Achievements";
 import Analytics from "@/pages/Analytics";
+import CreateChallenge from "@/pages/CreateChallenge";
+import MyChallenges from "@/pages/MyChallenges";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +44,11 @@ function Router() {
           <Route path="/history" component={History} />
           <Route path="/achievements" component={Achievements} />
           <Route path="/analytics" component={Analytics} />
+          <Route path="/my-challenges" component={MyChallenges} />
+          <Route path="/create-challenge" component={CreateChallenge} />
+          <Route path="/edit-challenge/:id">
+            {(params) => <CreateChallenge editId={params.id} />}
+          </Route>
         </>
       )}
       <Route component={NotFound} />

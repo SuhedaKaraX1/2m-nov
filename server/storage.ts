@@ -33,7 +33,10 @@ export interface IStorage {
   getChallengeById(id: string): Promise<Challenge | undefined>;
   getChallengesByCategory(category: string): Promise<Challenge[]>;
   getRandomChallenge(): Promise<Challenge | undefined>;
-  createChallenge(challenge: InsertChallenge): Promise<Challenge>;
+  createChallenge(challenge: InsertChallenge, userId: string): Promise<Challenge>;
+  updateChallenge(id: string, challenge: Partial<InsertChallenge>, userId: string): Promise<Challenge | undefined>;
+  deleteChallenge(id: string, userId: string): Promise<boolean>;
+  getUserChallenges(userId: string): Promise<Challenge[]>;
 
   // User Progress (user-specific)
   getUserProgress(userId: string): Promise<UserProgress>;
@@ -105,9 +108,47 @@ export class DatabaseStorage implements IStorage {
     return challenge;
   }
 
-  async createChallenge(insertChallenge: InsertChallenge): Promise<Challenge> {
-    const [challenge] = await db.insert(challenges).values(insertChallenge).returning();
+  async createChallenge(insertChallenge: InsertChallenge, userId: string): Promise<Challenge> {
+    const [challenge] = await db.insert(challenges).values({
+      ...insertChallenge,
+      createdBy: userId,
+    }).returning();
     return challenge;
+  }
+
+  async updateChallenge(id: string, updates: Partial<InsertChallenge>, userId: string): Promise<Challenge | undefined> {
+    // Check if challenge exists and was created by this user
+    const existing = await this.getChallengeById(id);
+    if (!existing || existing.createdBy !== userId) {
+      return undefined;
+    }
+
+    const [challenge] = await db
+      .update(challenges)
+      .set(updates)
+      .where(eq(challenges.id, id))
+      .returning();
+    return challenge;
+  }
+
+  async deleteChallenge(id: string, userId: string): Promise<boolean> {
+    // Check if challenge exists and was created by this user
+    const existing = await this.getChallengeById(id);
+    if (!existing || existing.createdBy !== userId) {
+      return false;
+    }
+
+    // System challenges (createdBy is null) cannot be deleted
+    if (existing.createdBy === null) {
+      return false;
+    }
+
+    await db.delete(challenges).where(eq(challenges.id, id));
+    return true;
+  }
+
+  async getUserChallenges(userId: string): Promise<Challenge[]> {
+    return await db.select().from(challenges).where(eq(challenges.createdBy, userId));
   }
 
   // User Progress
