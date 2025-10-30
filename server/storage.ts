@@ -1546,24 +1546,48 @@ const achievementSeedData: InsertAchievement[] = [
 // Initialize database with seed data (idempotent - checks before inserting)
 export async function seedDatabase() {
   try {
-    // Seed challenges
-    const existingChallenges = await db.select().from(challenges).limit(1);
-    if (existingChallenges.length === 0) {
-      console.log("Seeding database with challenges...");
-      await db.insert(challenges).values(challengeSeedData);
-      console.log(`Successfully seeded ${challengeSeedData.length} challenges`);
-    } else {
-      console.log("Database already seeded with challenges");
+    // Seed challenges - use count to check if data exists
+    try {
+      const challengeCount = await db.select({ count: sql<number>`count(*)` }).from(challenges);
+      const count = challengeCount[0]?.count || 0;
+      
+      if (count === 0) {
+        console.log("Seeding database with challenges...");
+        await db.insert(challenges).values(challengeSeedData);
+        console.log(`Successfully seeded ${challengeSeedData.length} challenges`);
+      } else {
+        console.log("Database already seeded with challenges");
+      }
+    } catch (error) {
+      console.log("Could not check challenges, attempting to seed anyway...");
+      try {
+        await db.insert(challenges).values(challengeSeedData);
+        console.log(`Successfully seeded ${challengeSeedData.length} challenges`);
+      } catch (insertError) {
+        console.log("Challenges may already exist or insert failed");
+      }
     }
 
-    // Seed achievements
-    const existingAchievements = await db.select().from(achievements).limit(1);
-    if (existingAchievements.length === 0) {
-      console.log("Seeding database with achievements...");
-      await db.insert(achievements).values(achievementSeedData);
-      console.log(`Successfully seeded ${achievementSeedData.length} achievements`);
-    } else {
-      console.log("Database already seeded with achievements");
+    // Seed achievements - use count to check if data exists
+    try {
+      const achievementCount = await db.select({ count: sql<number>`count(*)` }).from(achievements);
+      const count = achievementCount[0]?.count || 0;
+      
+      if (count === 0) {
+        console.log("Seeding database with achievements...");
+        await db.insert(achievements).values(achievementSeedData);
+        console.log(`Successfully seeded ${achievementSeedData.length} achievements`);
+      } else {
+        console.log("Database already seeded with achievements");
+      }
+    } catch (error) {
+      console.log("Could not check achievements, attempting to seed anyway...");
+      try {
+        await db.insert(achievements).values(achievementSeedData);
+        console.log(`Successfully seeded ${achievementSeedData.length} achievements`);
+      } catch (insertError) {
+        console.log("Achievements may already exist or insert failed");
+      }
     }
   } catch (error) {
     console.error("Error seeding database:", error);
