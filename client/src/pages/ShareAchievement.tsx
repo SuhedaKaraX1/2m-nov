@@ -6,16 +6,50 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Trophy, Award, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 
+interface SharedAchievementData {
+  achievement: {
+    tier: string;
+    icon: string;
+    name: string;
+    description: string;
+  };
+  user: {
+    firstName: string | null;
+    lastName: string | null;
+    profileImageUrl: string | null;
+  };
+  unlockedAt: string | null;
+}
+
 export default function ShareAchievement() {
   const [, params] = useRoute("/share/achievement/:id");
   const userAchievementId = params?.id;
 
-  const { data, isLoading, error} = useQuery({
+  const { data, isLoading, error} = useQuery<SharedAchievementData>({
     queryKey: [`/api/achievements/share/${userAchievementId}`],
     enabled: !!userAchievementId, // Only fetch if ID is present
   });
 
-  if (isLoading || !userAchievementId) {
+  // Handle missing ID parameter
+  if (!userAchievementId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full" data-testid="card-not-found">
+          <CardContent className="p-8 text-center space-y-4">
+            <Trophy className="h-12 w-12 text-muted-foreground mx-auto" />
+            <div>
+              <h2 className="text-xl font-semibold" data-testid="text-not-found-title">Achievement Not Found</h2>
+              <p className="text-muted-foreground mt-2" data-testid="text-not-found-description">
+                This achievement link may be invalid or has been removed.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
