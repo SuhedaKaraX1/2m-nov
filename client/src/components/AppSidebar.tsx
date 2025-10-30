@@ -1,4 +1,15 @@
-import { Home, Target, TrendingUp, Trophy, BarChart3, Users, Settings, User, Plus, Menu as MenuIcon } from "lucide-react";
+import {
+  Home,
+  Target,
+  TrendingUp,
+  Trophy,
+  BarChart3,
+  Users,
+  Settings,
+  User,
+  Plus,
+  Menu as MenuIcon,
+} from "lucide-react";
 import { useLocation } from "wouter";
 import {
   Sidebar,
@@ -58,15 +69,26 @@ const menuItems = [
     url: "/friends",
     icon: Users,
   },
+  {
+    title: "Profile",
+    url: "/Profile",
+    icon: Users,
+  },
+  {
+    title: "Settings",
+    url: "/Settings",
+    icon: Users,
+  },
 ];
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
 
-  const initials = user?.firstName && user?.lastName
-    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
-    : user?.email?.[0]?.toUpperCase() || "U";
+  const initials =
+    user?.firstName && user?.lastName
+      ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+      : user?.email?.[0]?.toUpperCase() || "U";
 
   return (
     <Sidebar data-testid="sidebar-app">
@@ -78,7 +100,10 @@ export function AppSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
-                    <a href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <a
+                      href={item.url}
+                      data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </a>
@@ -94,15 +119,24 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/create-challenge"}>
-                  <a href="/create-challenge" data-testid="link-create-challenge">
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/create-challenge"}
+                >
+                  <a
+                    href="/create-challenge"
+                    data-testid="link-create-challenge"
+                  >
                     <Plus className="h-4 w-4" />
                     <span>New Challenge</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/my-challenges"}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/my-challenges"}
+                >
                   <a href="/my-challenges" data-testid="link-my-challenges">
                     <Target className="h-4 w-4" />
                     <span>My Custom Challenges</span>
@@ -122,20 +156,24 @@ export function AppSidebar() {
                 <SidebarMenuButton data-testid="button-user-menu">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={user?.profileImageUrl || undefined} />
-                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                    <AvatarFallback className="text-xs">
+                      {initials}
+                    </AvatarFallback>
                   </Avatar>
-                  <span>{user?.firstName || user?.username || user?.email || "User"}</span>
+                  <span>
+                    {user?.firstName || user?.username || user?.email || "User"}
+                  </span>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem asChild data-testid="menu-item-profile">
-                  <a href="/profile">
+                  <a href="/Profile">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </a>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild data-testid="menu-item-settings">
-                  <a href="/settings">
+                  <a href="/Settings">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </a>
