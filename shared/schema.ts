@@ -14,13 +14,21 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// Users table (Required for Replit Auth)
+// Users table (Required for Replit Auth and local auth)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  username: varchar("username").unique(),
+  password: varchar("password"), // hashed password for local auth
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  // Onboarding preferences
+  preferredCategories: jsonb("preferred_categories").$type<ChallengeCategory[]>(), // e.g., ["mental", "physical"]
+  hasMentalHealthConcerns: text("has_mental_health_concerns"), // "yes" or "no"
+  mentalHealthDetails: text("mental_health_details"), // specific concerns if any
+  preferredDays: jsonb("preferred_days").$type<number[]>(), // e.g., [1,3,5] for Mon, Wed, Fri (0=Sunday, 6=Saturday)
+  onboardingCompleted: integer("onboarding_completed").default(0), // 0 = not completed, 1 = completed
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
