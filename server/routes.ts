@@ -1,11 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, seedDatabase } from "./storage";
-import { insertChallengeHistorySchema, insertChallengeSchema } from "@shared/schema";
+import { insertChallengeHistorySchema, insertChallengeSchema, users } from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupLocalAuth, registerUser } from "./localAuth";
 import passport from "passport";
 import { z } from "zod";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -519,6 +521,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching friend activity:", error);
       res.status(500).json({ error: "Failed to fetch friend activity" });
+    }
+  });
+
+  app.get("/api/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const user = await storage.getUser(userId);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const settings = {
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        username: user.username || "",
+        email: user.email || "",
+        language: "en",
+        theme: "system" as const,
+        emailNotifications: true,
+        pushNotifications: true,
+        weeklySummary: true,
+        profileVisibility: "friends" as const,
+        dataSharing: false,
+        profileImageUrl: user.profileImageUrl || undefined,
+      };
+
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ error: "Failed to fetch settings" });
+    }
+  });
+
+  app.post("/api/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const { firstName, lastName, username, email, profileImageUrl } = req.body;
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const updateData: any = {};
+      if (firstName !== undefined) updateData.firstName = firstName;
+      if (lastName !== undefined) updateData.lastName = lastName;
+      if (username !== undefined) updateData.username = username;
+      if (email !== undefined) updateData.email = email;
+      if (profileImageUrl !== undefined) updateData.profileImageUrl = profileImageUrl;
+
+      if (Object.keys(updateData).length > 0) {
+        updateData.updatedAt = new Date();
+        await db.update(users).set(updateData).where(eq(users.id, userId));
+      }
+
+      const updatedUser = await storage.getUser(userId);
+      const settings = {
+        firstName: updatedUser?.firstName || "",
+        lastName: updatedUser?.lastName || "",
+        username: updatedUser?.username || "",
+        email: updatedUser?.email || "",
+        language: "en",
+        theme: "system" as const,
+        emailNotifications: true,
+        pushNotifications: true,
+        weeklySummary: true,
+        profileVisibility: "friends" as const,
+        dataSharing: false,
+        profileImageUrl: updatedUser?.profileImageUrl || undefined,
+      };
+
+      res.json(settings);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      res.status(500).json({ error: "Failed to save settings" });
     }
   });
 
