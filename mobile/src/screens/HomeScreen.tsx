@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HomeStackParamList } from '../navigation/MainNavigator';
 import { colors, typography } from '../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { Card, CardContent, Loading, Badge } from '@/components/ui';
 
 type NavigationProp = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 
@@ -46,23 +47,26 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Today's Challenge</Text>
         {isLoading ? (
-          <ActivityIndicator size="large" color={colors.primary} />
+          <Loading text="Loading challenge..." fullScreen={false} />
         ) : randomChallenge ? (
           <TouchableOpacity
-            style={styles.challengeCard}
             onPress={() => navigation.navigate('ChallengeDetail', { id: randomChallenge.id })}
           >
-            <View style={styles.challengeHeader}>
-              <Text style={styles.challengeCategory}>{randomChallenge.category}</Text>
-              <View style={styles.pointsBadge}>
-                <Ionicons name="flash" size={16} color={colors.categories.learning} />
-                <Text style={styles.pointsText}>{randomChallenge.points}</Text>
-              </View>
-            </View>
-            <Text style={styles.challengeTitle}>{randomChallenge.title}</Text>
-            <Text style={styles.challengeDescription} numberOfLines={2}>
-              {randomChallenge.description}
-            </Text>
+            <Card>
+              <CardContent>
+                <View style={styles.challengeHeader}>
+                  <Badge variant="primary">{randomChallenge.category}</Badge>
+                  <View style={styles.pointsBadge}>
+                    <Ionicons name="flash" size={16} color={colors.categories.learning} />
+                    <Text style={styles.pointsText}>{randomChallenge.points}</Text>
+                  </View>
+                </View>
+                <Text style={styles.challengeTitle}>{randomChallenge.title}</Text>
+                <Text style={styles.challengeDescription} numberOfLines={2}>
+                  {randomChallenge.description}
+                </Text>
+              </CardContent>
+            </Card>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -126,24 +130,11 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     marginBottom: 12,
   },
-  challengeCard: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
   challengeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-  },
-  challengeCategory: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.medium,
-    color: colors.primary,
-    textTransform: 'capitalize',
+    marginBottom: 12,
   },
   pointsBadge: {
     flexDirection: 'row',
