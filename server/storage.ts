@@ -5,6 +5,7 @@ import {
   type InsertUserProgress,
   type ChallengeHistory,
   type InsertChallengeHistory,
+  type CreateChallengeHistory,
   type ChallengeWithDetails,
   type User,
   type UpsertUser,
@@ -31,6 +32,21 @@ export interface IStorage {
   // User operations (Required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  findUserByEmailOrUsername(emailOrUsername: string): Promise<User | undefined>;
+  createLocalUser(userData: {
+    email: string;
+    username: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+  }): Promise<User>;
+  updateUserPreferences(userId: string, preferences: {
+    preferredCategories?: string[];
+    hasMentalHealthConcerns?: string;
+    mentalHealthDetails?: string;
+    preferredDays?: number[];
+    onboardingCompleted?: number;
+  }): Promise<User>;
 
   // Challenges
   getAllChallenges(): Promise<Challenge[]>;
@@ -51,7 +67,7 @@ export interface IStorage {
 
   // Challenge History (user-specific)
   getAllHistory(userId: string): Promise<ChallengeWithDetails[]>;
-  addHistoryEntry(userId: string, entry: InsertChallengeHistory): Promise<ChallengeHistory>;
+  addHistoryEntry(userId: string, entry: CreateChallengeHistory): Promise<ChallengeHistory>;
   getHistoryByDate(userId: string, date: string): Promise<ChallengeHistory[]>;
 
   // Achievements
@@ -107,6 +123,62 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date(),
         },
       })
+      .returning();
+    return user;
+  }
+
+  async findUserByEmailOrUsername(emailOrUsername: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        or(
+          eq(users.email, emailOrUsername),
+          eq(users.username, emailOrUsername)
+        )
+      );
+    return user;
+  }
+
+  async createLocalUser(userData: {
+    email: string;
+    username: string;
+    password: string;
+    firstName?: string;
+    lastName?: string;
+  }): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        email: userData.email,
+        username: userData.username,
+        password: userData.password,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        onboardingCompleted: 0,
+      })
+      .returning();
+    return user;
+  }
+
+  async updateUserPreferences(userId: string, preferences: {
+    preferredCategories?: string[];
+    hasMentalHealthConcerns?: string;
+    mentalHealthDetails?: string;
+    preferredDays?: number[];
+    onboardingCompleted?: number;
+  }): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        preferredCategories: preferences.preferredCategories as any,
+        hasMentalHealthConcerns: preferences.hasMentalHealthConcerns,
+        mentalHealthDetails: preferences.mentalHealthDetails,
+        preferredDays: preferences.preferredDays as any,
+        onboardingCompleted: preferences.onboardingCompleted,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
       .returning();
     return user;
   }

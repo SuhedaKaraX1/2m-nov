@@ -103,8 +103,21 @@ export async function setupAuth(app: Express) {
     }
   };
 
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+  passport.serializeUser((user: any, cb) => {
+    // Serialize both Replit Auth (user with claims) and local auth (user object)
+    // Remove password if it exists
+    if (user.password) {
+      const { password: _, ...sanitizedUser } = user;
+      cb(null, sanitizedUser);
+    } else {
+      cb(null, user);
+    }
+  });
+  
+  passport.deserializeUser((user: any, cb) => {
+    // Deserialize both types of users
+    cb(null, user);
+  });
 
   app.get("/api/login", (req, res, next) => {
     ensureStrategy(req.hostname);
@@ -137,10 +150,17 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
+  // For local auth users (no OIDC claims), just check if authenticated
+  if (!user.expires_at) {
+    // This is a local auth user (password-based), they're already authenticated
+    return next();
+  }
+
+  // For Replit Auth users, check token expiration
   const now = Math.floor(Date.now() / 1000);
   if (now <= user.expires_at) {
     return next();

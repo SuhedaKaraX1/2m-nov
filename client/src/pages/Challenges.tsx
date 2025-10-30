@@ -24,9 +24,9 @@ export default function Challenges() {
     setSelectedCategory(categoryParam || "all");
   }, [categoryParam]);
 
-  // Fetch all challenges
+  // Fetch personalized challenges based on user preferences
   const { data: challenges, isLoading } = useQuery<Challenge[]>({
-    queryKey: ["/api/challenges"],
+    queryKey: ["/api/challenges/personalized"],
   });
 
   const filteredChallenges = challenges?.filter(

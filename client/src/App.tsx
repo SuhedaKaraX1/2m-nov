@@ -3,9 +3,12 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import Home from "@/pages/Home";
-import Landing from "@/pages/Landing";
+import Login from "@/pages/Login";
+import Onboarding from "@/pages/Onboarding";
 import ChallengeDetail from "@/pages/ChallengeDetail";
 import Challenges from "@/pages/Challenges";
 import Progress from "@/pages/Progress";
@@ -15,11 +18,13 @@ import Analytics from "@/pages/Analytics";
 import CreateChallenge from "@/pages/CreateChallenge";
 import MyChallenges from "@/pages/MyChallenges";
 import Friends from "@/pages/Friends";
+import Profile from "@/pages/Profile";
+import Settings from "@/pages/Settings";
 import ShareAchievement from "@/pages/ShareAchievement";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   // Show loading state while checking auth
   if (isLoading) {
@@ -33,33 +38,59 @@ function Router() {
     );
   }
 
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/share/achievement/:id" component={ShareAchievement} />
+        <Route component={Login} />
+      </Switch>
+    );
+  }
+
+  // Show onboarding if user hasn't completed it
+  if (user && user.onboardingCompleted === 0) {
+    return <Onboarding />;
+  }
+
+  // Show main app with sidebar
+  const sidebarStyle = {
+    "--sidebar-width": "16rem",
+    "--sidebar-width-icon": "3rem",
+  };
+
   return (
-    <Switch>
-      {/* Public routes */}
-      <Route path="/share/achievement/:id" component={ShareAchievement} />
-      
-      {/* Auth-dependent routes */}
-      {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Home} />
-          <Route path="/challenge/:id" component={ChallengeDetail} />
-          <Route path="/challenges" component={Challenges} />
-          <Route path="/progress" component={Progress} />
-          <Route path="/history" component={History} />
-          <Route path="/achievements" component={Achievements} />
-          <Route path="/analytics" component={Analytics} />
-          <Route path="/my-challenges" component={MyChallenges} />
-          <Route path="/create-challenge" component={CreateChallenge} />
-          <Route path="/edit-challenge/:id">
-            {(params) => <CreateChallenge editId={params.id} />}
-          </Route>
-          <Route path="/friends" component={Friends} />
-        </>
-      )}
-      <Route component={NotFound} />
-    </Switch>
+    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+      <div className="flex h-screen w-full">
+        <AppSidebar />
+        <div className="flex flex-col flex-1">
+          <header className="flex items-center justify-between p-4 border-b">
+            <SidebarTrigger data-testid="button-sidebar-toggle" />
+          </header>
+          <main className="flex-1 overflow-auto">
+            <Switch>
+              <Route path="/" component={Home} />
+              <Route path="/challenge/:id" component={ChallengeDetail} />
+              <Route path="/challenges" component={Challenges} />
+              <Route path="/progress" component={Progress} />
+              <Route path="/history" component={History} />
+              <Route path="/achievements" component={Achievements} />
+              <Route path="/analytics" component={Analytics} />
+              <Route path="/my-challenges" component={MyChallenges} />
+              <Route path="/create-challenge" component={CreateChallenge} />
+              <Route path="/edit-challenge/:id">
+                {(params) => <CreateChallenge editId={params.id} />}
+              </Route>
+              <Route path="/friends" component={Friends} />
+              <Route path="/profile" component={Profile} />
+              <Route path="/settings" component={Settings} />
+              <Route path="/share/achievement/:id" component={ShareAchievement} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
 

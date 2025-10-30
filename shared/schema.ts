@@ -104,7 +104,12 @@ export const insertChallengeHistorySchema = createInsertSchema(challengeHistory)
   id: true,
 });
 
+export const createChallengeHistorySchema = insertChallengeHistorySchema.omit({
+  userId: true,
+});
+
 export type InsertChallengeHistory = z.infer<typeof insertChallengeHistorySchema>;
+export type CreateChallengeHistory = z.infer<typeof createChallengeHistorySchema>;
 export type ChallengeHistory = typeof challengeHistory.$inferSelect;
 
 // Challenge with completion info (for history display)
