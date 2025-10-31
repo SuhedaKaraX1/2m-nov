@@ -20,6 +20,7 @@ import MyChallenges from "@/pages/MyChallenges";
 import Friends from "@/pages/Friends";
 import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
+import Notifications from "@/pages/Notifications";
 import ShareAchievement from "@/pages/ShareAchievement";
 import NotFound from "@/pages/not-found";
 
@@ -84,6 +85,7 @@ function Router() {
               <Route path="/friends" component={Friends} />
               <Route path="/profile" component={Profile} />
               <Route path="/settings" component={Settings} />
+              <Route path="/notifications" component={Notifications} />
               <Route path="/share/achievement/:id" component={ShareAchievement} />
               <Route component={NotFound} />
             </Switch>

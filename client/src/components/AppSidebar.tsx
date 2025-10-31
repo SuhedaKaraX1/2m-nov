@@ -9,6 +9,8 @@ import {
   User,
   Plus,
   Menu as MenuIcon,
+  Bell,
+  LogOut,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import {
@@ -166,16 +168,16 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem asChild data-testid="menu-item-profile">
-                  <a href="/Profile">
+                <DropdownMenuItem asChild data-testid="menu-item-account">
+                  <a href="/settings">
                     <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <span>Account</span>
                   </a>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild data-testid="menu-item-settings">
-                  <a href="/Settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                <DropdownMenuItem asChild data-testid="menu-item-notifications">
+                  <a href="/notifications">
+                    <Bell className="mr-2 h-4 w-4" />
+                    <span>Notifications</span>
                   </a>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -183,7 +185,8 @@ export function AppSidebar() {
                   onClick={() => (window.location.href = "/api/logout")}
                   data-testid="menu-item-logout"
                 >
-                  <span>Log out</span>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
