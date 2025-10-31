@@ -6,7 +6,7 @@ import {
   BarChart3,
   Users,
   Settings,
-  User,
+  User as UserIcon,
   Plus,
   Menu as MenuIcon,
   Bell,
@@ -35,62 +35,42 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const LOGOUT_URL = "/api/logout"; // Sunucunuz farklıysa (/api/auth/logout) burayı değiştirin.
+
 const menuItems = [
-  {
-    title: "Home",
-    url: "/",
-    icon: Home,
-  },
-  {
-    title: "My Challenges",
-    url: "/challenges",
-    icon: Target,
-  },
-  {
-    title: "Progress",
-    url: "/progress",
-    icon: TrendingUp,
-  },
-  {
-    title: "Achievements",
-    url: "/achievements",
-    icon: Trophy,
-  },
-  {
-    title: "Analytics",
-    url: "/analytics",
-    icon: BarChart3,
-  },
-  {
-    title: "History",
-    url: "/history",
-    icon: MenuIcon,
-  },
-  {
-    title: "Friends",
-    url: "/friends",
-    icon: Users,
-  },
-  {
-    title: "Profile",
-    url: "/Profile",
-    icon: Users,
-  },
-  {
-    title: "Settings",
-    url: "/Settings",
-    icon: Users,
-  },
+  { title: "Home", url: "/", icon: Home },
+  { title: "My Challenges", url: "/challenges", icon: Target },
+  { title: "Progress", url: "/progress", icon: TrendingUp },
+  { title: "Achievements", url: "/achievements", icon: Trophy },
+  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "History", url: "/history", icon: MenuIcon },
+  { title: "Friends", url: "/friends", icon: Users },
+  { title: "Profile", url: "/profile", icon: Users },
+  { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation(); // <- navigate eklendi
   const { user } = useAuth();
 
   const initials =
     user?.firstName && user?.lastName
       ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
       : user?.email?.[0]?.toUpperCase() || "U";
+
+  async function handleLogout() {
+    try {
+      // Bazı kurulumlardaki farklılıklar için POST dene, olmazsa GET dene
+      await fetch(LOGOUT_URL, { method: "POST", credentials: "include" }).catch(
+        () => fetch(LOGOUT_URL, { method: "GET", credentials: "include" }),
+      );
+    } catch {
+      // ağ hatasını yoksay – client navigasyonu yine de yapacağız
+    } finally {
+      // Wouter SPA yönlendirmesi (react-router yok!):
+      navigate("/login", { replace: true });
+    }
+  }
 
   return (
     <Sidebar data-testid="sidebar-app">
@@ -150,39 +130,49 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
+      {/* ==== Bottom user area: click name/avatar opens dropdown ==== */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
+              {/* Trigger: gerçek <button> kullanıyoruz */}
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton data-testid="button-user-menu">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-10 px-2"
+                  data-testid="button-user-menu"
+                >
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={user?.profileImageUrl || undefined} />
                     <AvatarFallback className="text-xs">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
-                  <span>
+                  <span className="ml-2 truncate">
                     {user?.firstName || user?.username || user?.email || "User"}
                   </span>
-                </SidebarMenuButton>
+                </Button>
               </DropdownMenuTrigger>
+
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem asChild data-testid="menu-item-account">
                   <a href="/settings">
-                    <User className="mr-2 h-4 w-4" />
+                    <UserIcon className="mr-2 h-4 w-4" />
                     <span>Account</span>
                   </a>
                 </DropdownMenuItem>
+
                 <DropdownMenuItem asChild data-testid="menu-item-notifications">
                   <a href="/notifications">
                     <Bell className="mr-2 h-4 w-4" />
                     <span>Notifications</span>
                   </a>
                 </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
+
                 <DropdownMenuItem
-                  onClick={() => (window.location.href = "/api/logout")}
+                  onClick={handleLogout}
                   data-testid="menu-item-logout"
                 >
                   <LogOut className="mr-2 h-4 w-4" />

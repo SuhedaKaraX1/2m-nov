@@ -1,7 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, seedDatabase } from "./storage";
-import { insertChallengeHistorySchema, insertChallengeSchema, users } from "@shared/schema";
+import {
+  insertChallengeHistorySchema,
+  insertChallengeSchema,
+  users,
+} from "@shared/schema";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupLocalAuth, registerUser } from "./localAuth";
 import passport from "passport";
@@ -10,31 +14,38 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication
+  // Auth & seed
   await setupAuth(app);
   setupLocalAuth();
-
-  // Seed database on startup
   await seedDatabase();
 
-  // Local auth routes
+  // -----------------------
+  // AUTH: Register & Login
+  // -----------------------
   app.post("/api/auth/register", async (req, res) => {
     try {
       const { email, username, password, firstName, lastName } = req.body;
-
       if (!email || !username || !password) {
-        return res.status(400).json({ message: "Email, username, and password are required" });
+        return res
+          .status(400)
+          .json({ message: "Email, username, and password are required" });
       }
 
-      const user = await registerUser(email, username, password, firstName, lastName);
+      const user = await registerUser(
+        email,
+        username,
+        password,
+        firstName,
+        lastName,
+      );
 
-      // Log the user in after registration
       req.login(user, (err) => {
         if (err) {
-          return res.status(500).json({ message: "Registration successful but login failed" });
+          return res
+            .status(500)
+            .json({ message: "Registration successful but login failed" });
         }
-        // Remove password from response
-        const { password: _, ...sanitizedUser } = user;
+        const { password: _pw, ...sanitizedUser } = user as any;
         res.json(sanitizedUser);
       });
     } catch (error: any) {
@@ -45,30 +56,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/local/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) {
-        return res.status(500).json({ message: "Authentication error" });
-      }
-      if (!user) {
-        return res.status(401).json({ message: info?.message || "Invalid credentials" });
-      }
+      if (err) return res.status(500).json({ message: "Authentication error" });
+      if (!user)
+        return res
+          .status(401)
+          .json({ message: info?.message || "Invalid credentials" });
+
       req.login(user, (err) => {
-        if (err) {
-          return res.status(500).json({ message: "Login failed" });
-        }
-        // Remove password from response
-        const { password: _, ...sanitizedUser } = user as any;
+        if (err) return res.status(500).json({ message: "Login failed" });
+        const { password: _pw, ...sanitizedUser } = user as any;
         res.json(sanitizedUser);
       });
     })(req, res, next);
   });
 
-  // Update user onboarding preferences
+  // -----------------------
+  // AUTH: Logout (EKLENDİ)
+  // -----------------------
+  const doLogout = (req: any, res: any) => {
+    try {
+      // Passport logout (callback’li veya senkron olabilir)
+      if (typeof req.logout === "function") {
+        // Passport v0.6+
+        return req.logout((err: any) => {
+          if (err) {
+            console.error("Logout error:", err);
+            return res.status(500).json({ message: "Logout failed" });
+          }
+          // Session’ı kapat
+          if (req.session) {
+            req.session.destroy(() => {
+              res.clearCookie("connect.sid"); // cookie adı sizin setup’a göre değişebilir
+              return res.status(200).json({ success: true });
+            });
+          } else {
+            res.clearCookie("connect.sid");
+            return res.status(200).json({ success: true });
+          }
+        });
+      }
+
+      // Fallback: session destroy
+      if (req.session) {
+        req.session.destroy(() => {
+          res.clearCookie("connect.sid");
+          return res.status(200).json({ success: true });
+        });
+      } else {
+        res.clearCookie("connect.sid");
+        return res.status(200).json({ success: true });
+      }
+    } catch (e) {
+      console.error("Logout exception:", e);
+      return res.status(500).json({ message: "Logout failed" });
+    }
+  };
+
+  app.post("/api/logout", doLogout);
+  app.get("/api/logout", doLogout); // bazı client’lar GET çağırabilir
+
+  // -----------------------
+  // AUTH: Onboarding (FIX)
+  // -----------------------
   app.post("/api/auth/onboarding", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
-      const { preferredCategories, hasMentalHealthConcerns, mentalHealthDetails, preferredDays } = req.body;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const user = await storage.updateUserPreferences(userId, {
+      const {
+        preferredCategories = [],
+        hasMentalHealthConcerns = "no",
+        mentalHealthDetails = "",
+        preferredDays = [],
+      } = req.body ?? {};
+
+      const updated = await storage.updateUserPreferences(userId, {
         preferredCategories,
         hasMentalHealthConcerns,
         mentalHealthDetails,
@@ -76,8 +138,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         onboardingCompleted: 1,
       });
 
-      // Remove password from response for security
-      const { password: _, ...sanitizedUser } = user;
+      if (!updated) {
+        return res
+          .status(404)
+          .json({ message: "User not found or update failed" });
+      }
+
+      const { password: _pw, ...sanitizedUser } = updated as any;
       res.json(sanitizedUser);
     } catch (error) {
       console.error("Onboarding error:", error);
@@ -85,27 +152,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth routes - return null if not authenticated (don't require auth)
+  // -----------------------
+  // AUTH: Current User
+  // -----------------------
   app.get("/api/auth/user", async (req: any, res) => {
     try {
-      // Check if user is authenticated
-      if (!req.isAuthenticated()) {
-        return res.json(null);
-      }
+      if (!req.isAuthenticated?.() || !req.user) return res.json(null);
 
-      // Handle both Replit Auth and local auth
       const userId = req.user?.claims?.sub || req.user?.id;
-      if (!userId) {
-        return res.json(null);
-      }
+      if (!userId) return res.json(null);
 
       const user = await storage.getUser(userId);
-      if (!user) {
-        return res.json(null);
-      }
+      if (!user) return res.json(null);
 
-      // Remove password from response for security
-      const { password: _, ...sanitizedUser } = user;
+      const { password: _pw, ...sanitizedUser } = user as any;
       res.json(sanitizedUser);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -113,12 +173,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Public challenge routes (no auth required)
+  // -----------------------
+  // Public challenge routes
+  // -----------------------
   app.get("/api/challenges", async (_req, res) => {
     try {
       const challenges = await storage.getAllChallenges();
       res.json(challenges);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch challenges" });
     }
   });
@@ -126,11 +188,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/challenges/random", async (_req, res) => {
     try {
       const challenge = await storage.getRandomChallenge();
-      if (!challenge) {
+      if (!challenge)
         return res.status(404).json({ error: "No challenges available" });
-      }
       res.json(challenge);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch random challenge" });
     }
   });
@@ -138,112 +199,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/challenges/:id", async (req, res) => {
     try {
       const challenge = await storage.getChallengeById(req.params.id);
-      if (!challenge) {
+      if (!challenge)
         return res.status(404).json({ error: "Challenge not found" });
-      }
       res.json(challenge);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch challenge" });
     }
   });
 
   app.get("/api/challenges/category/:category", async (req, res) => {
     try {
-      const challenges = await storage.getChallengesByCategory(req.params.category);
+      const challenges = await storage.getChallengesByCategory(
+        req.params.category,
+      );
       res.json(challenges);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch challenges by category" });
     }
   });
 
-  // Get personalized challenges based on user preferences
-  app.get("/api/challenges/personalized", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
+  // -----------------------
+  // Personalized challenges
+  // -----------------------
+  app.get(
+    "/api/challenges/personalized",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const user = await storage.getUser(userId);
+        if (!user) return res.status(404).json({ error: "User not found" });
 
-      let challenges = await storage.getAllChallenges();
+        let challenges = await storage.getAllChallenges();
 
-      // Filter by preferred categories if user has completed onboarding
-      if (user.onboardingCompleted === 1 && user.preferredCategories && user.preferredCategories.length > 0) {
-        challenges = challenges.filter((challenge) => 
-          (user.preferredCategories as string[]).includes(challenge.category)
-        );
-
-        // Further filter mental challenges if user has mental health concerns
-        if (user.hasMentalHealthConcerns === "yes" && user.mentalHealthDetails) {
-          // This is where we could add more sophisticated filtering based on mental health details
-          // For now, we'll include all mental challenges but could filter based on keywords
-          // in user.mentalHealthDetails (e.g., "anxiety", "depression", etc.)
+        if (
+          user.onboardingCompleted === 1 &&
+          user.preferredCategories?.length > 0
+        ) {
+          challenges = challenges.filter((c) =>
+            (user.preferredCategories as string[]).includes(c.category),
+          );
+          // Ek filtreler burada uygulanabilir
         }
+
+        const shuffled = challenges.sort(() => Math.random() - 0.5);
+        res.json(shuffled);
+      } catch (error) {
+        console.error("Error fetching personalized challenges:", error);
+        res
+          .status(500)
+          .json({ error: "Failed to fetch personalized challenges" });
       }
+    },
+  );
 
-      // Randomize the challenges
-      const shuffled = challenges.sort(() => Math.random() - 0.5);
-
-      res.json(shuffled);
-    } catch (error) {
-      console.error("Error fetching personalized challenges:", error);
-      res.status(500).json({ error: "Failed to fetch personalized challenges" });
-    }
-  });
-
-  // Protected routes (require authentication)
-  
-  // Create a new challenge
+  // -----------------------
+  // Protected: CRUD
+  // -----------------------
   app.post("/api/challenges", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       const challengeData = insertChallengeSchema.parse(req.body);
-      
       const challenge = await storage.createChallenge(challengeData, userId);
       res.status(201).json(challenge);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid challenge data", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid challenge data", details: error.errors });
       }
       console.error("Error creating challenge:", error);
       res.status(500).json({ error: "Failed to create challenge" });
     }
   });
 
-  // Update a challenge
   app.patch("/api/challenges/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       const challengeId = req.params.id;
       const updates = insertChallengeSchema.partial().parse(req.body);
-      
-      const challenge = await storage.updateChallenge(challengeId, updates, userId);
+      const challenge = await storage.updateChallenge(
+        challengeId,
+        updates,
+        userId,
+      );
       if (!challenge) {
-        return res.status(404).json({ error: "Challenge not found or unauthorized" });
+        return res
+          .status(404)
+          .json({ error: "Challenge not found or unauthorized" });
       }
-      
       res.json(challenge);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid challenge data", details: error.errors });
+        return res
+          .status(400)
+          .json({ error: "Invalid challenge data", details: error.errors });
       }
       console.error("Error updating challenge:", error);
       res.status(500).json({ error: "Failed to update challenge" });
     }
   });
 
-  // Delete a challenge
   app.delete("/api/challenges/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       const challengeId = req.params.id;
-      
       const deleted = await storage.deleteChallenge(challengeId, userId);
       if (!deleted) {
-        return res.status(404).json({ error: "Challenge not found or unauthorized" });
+        return res
+          .status(404)
+          .json({ error: "Challenge not found or unauthorized" });
       }
-      
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting challenge:", error);
@@ -251,65 +317,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user's custom challenges
-  app.get("/api/challenges/user/my-challenges", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const challenges = await storage.getUserChallenges(userId);
-      res.json(challenges);
-    } catch (error) {
-      console.error("Error fetching user challenges:", error);
-      res.status(500).json({ error: "Failed to fetch user challenges" });
-    }
-  });
-  app.post("/api/challenges/:id/complete", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const challengeId = req.params.id;
-      const challenge = await storage.getChallengeById(challengeId);
-      
-      if (!challenge) {
-        return res.status(404).json({ error: "Challenge not found" });
+  app.get(
+    "/api/challenges/user/my-challenges",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const challenges = await storage.getUserChallenges(userId);
+        res.json(challenges);
+      } catch (error) {
+        console.error("Error fetching user challenges:", error);
+        res.status(500).json({ error: "Failed to fetch user challenges" });
       }
+    },
+  );
 
-      // Validate request body
-      const bodySchema = z.object({
-        timeSpent: z.number().int().min(0).max(120),
-      });
+  app.post(
+    "/api/challenges/:id/complete",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const challengeId = req.params.id;
+        const challenge = await storage.getChallengeById(challengeId);
+        if (!challenge)
+          return res.status(404).json({ error: "Challenge not found" });
 
-      const { timeSpent } = bodySchema.parse(req.body);
+        const bodySchema = z.object({
+          timeSpent: z.number().int().min(0).max(120),
+        });
+        const { timeSpent } = bodySchema.parse(req.body);
 
-      // Add to history (user-specific)
-      const historyEntry = await storage.addHistoryEntry(userId, {
-        challengeId,
-        completedAt: new Date().toISOString(),
-        timeSpent,
-        pointsEarned: challenge.points,
-      });
+        const historyEntry = await storage.addHistoryEntry(userId, {
+          challengeId,
+          completedAt: new Date().toISOString(),
+          timeSpent,
+          pointsEarned: challenge.points,
+        });
 
-      // Check for newly unlocked achievements
-      const newAchievements = await storage.checkAndUnlockAchievements(userId);
+        const newAchievements =
+          await storage.checkAndUnlockAchievements(userId);
 
-      res.json({
-        success: true,
-        historyEntry,
-        pointsEarned: challenge.points,
-        newAchievements,
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid request data", details: error.errors });
+        res.json({
+          success: true,
+          historyEntry,
+          pointsEarned: challenge.points,
+          newAchievements,
+        });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return res
+            .status(400)
+            .json({ error: "Invalid request data", details: error.errors });
+        }
+        res.status(500).json({ error: "Failed to complete challenge" });
       }
-      res.status(500).json({ error: "Failed to complete challenge" });
-    }
-  });
+    },
+  );
 
+  // -----------------------
+  // Progress & History
+  // -----------------------
   app.get("/api/progress", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       const progress = await storage.getUserProgress(userId);
       res.json(progress);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch progress" });
     }
   });
@@ -319,17 +393,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.claims?.sub || req.user?.id;
       const history = await storage.getAllHistory(userId);
       res.json(history);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch history" });
     }
   });
 
-  // Achievement routes
+  // -----------------------
+  // Achievements
+  // -----------------------
   app.get("/api/achievements", async (_req, res) => {
     try {
       const achievements = await storage.getAllAchievements();
       res.json(achievements);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch achievements" });
     }
   });
@@ -339,31 +415,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.claims?.sub || req.user?.id;
       const achievements = await storage.getUserAchievements(userId);
       res.json(achievements);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch user achievements" });
     }
   });
 
-  app.post("/api/achievements/check", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const newAchievements = await storage.checkAndUnlockAchievements(userId);
-      res.json({ newAchievements });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to check achievements" });
-    }
-  });
+  app.post(
+    "/api/achievements/check",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const newAchievements =
+          await storage.checkAndUnlockAchievements(userId);
+        res.json({ newAchievements });
+      } catch {
+        res.status(500).json({ error: "Failed to check achievements" });
+      }
+    },
+  );
 
-  // Public achievement share endpoint (no auth required)
+  // -----------------------
+  // Share (Public)
+  // -----------------------
   app.get("/api/achievements/share/:userAchievementId", async (req, res) => {
     try {
       const { userAchievementId } = req.params;
       const share = await storage.getAchievementShare(userAchievementId);
-      
-      if (!share) {
+      if (!share)
         return res.status(404).json({ error: "Achievement not found" });
-      }
-      
       res.json(share);
     } catch (error) {
       console.error("Error fetching shared achievement:", error);
@@ -371,14 +451,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Analytics routes
+  // -----------------------
+  // Analytics
+  // -----------------------
   app.get("/api/analytics/daily", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       const days = parseInt(req.query.days as string) || 30;
       const stats = await storage.getDailyStats(userId, days);
       res.json(stats);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch daily stats" });
     }
   });
@@ -388,7 +470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.claims?.sub || req.user?.id;
       const distribution = await storage.getCategoryDistribution(userId);
       res.json(distribution);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch category distribution" });
     }
   });
@@ -398,7 +480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.claims?.sub || req.user?.id;
       const trend = await storage.getWeeklyTrend(userId);
       res.json(trend);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch weekly trend" });
     }
   });
@@ -408,27 +490,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.claims?.sub || req.user?.id;
       const trend = await storage.getMonthlyTrend(userId);
       res.json(trend);
-    } catch (error) {
+    } catch {
       res.status(500).json({ error: "Failed to fetch monthly trend" });
     }
   });
 
-  // Friends routes
+  // -----------------------
+  // Friends
+  // -----------------------
   app.post("/api/friends/request", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ error: "Email is required" });
-      }
+      if (!email) return res.status(400).json({ error: "Email is required" });
 
       const friendship = await storage.sendFriendRequest(userId, email);
-      
       if (!friendship) {
-        return res.status(400).json({ error: "Unable to send friend request. User may not exist or friendship already exists." });
+        return res.status(400).json({
+          error:
+            "Unable to send friend request. User may not exist or friendship already exists.",
+        });
       }
-
       res.status(201).json(friendship);
     } catch (error) {
       console.error("Error sending friend request:", error);
@@ -436,41 +518,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/friends/:id/accept", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const friendshipId = req.params.id;
-
-      const friendship = await storage.acceptFriendRequest(friendshipId, userId);
-      
-      if (!friendship) {
-        return res.status(404).json({ error: "Friend request not found or already responded to" });
+  app.patch(
+    "/api/friends/:id/accept",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const friendshipId = req.params.id;
+        const friendship = await storage.acceptFriendRequest(
+          friendshipId,
+          userId,
+        );
+        if (!friendship) {
+          return res
+            .status(404)
+            .json({
+              error: "Friend request not found or already responded to",
+            });
+        }
+        res.json(friendship);
+      } catch (error) {
+        console.error("Error accepting friend request:", error);
+        res.status(500).json({ error: "Failed to accept friend request" });
       }
+    },
+  );
 
-      res.json(friendship);
-    } catch (error) {
-      console.error("Error accepting friend request:", error);
-      res.status(500).json({ error: "Failed to accept friend request" });
-    }
-  });
-
-  app.patch("/api/friends/:id/decline", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const friendshipId = req.params.id;
-
-      const success = await storage.declineFriendRequest(friendshipId, userId);
-      
-      if (!success) {
-        return res.status(404).json({ error: "Friend request not found or already responded to" });
+  app.patch(
+    "/api/friends/:id/decline",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const friendshipId = req.params.id;
+        const success = await storage.declineFriendRequest(
+          friendshipId,
+          userId,
+        );
+        if (!success) {
+          return res
+            .status(404)
+            .json({
+              error: "Friend request not found or already responded to",
+            });
+        }
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error declining friend request:", error);
+        res.status(500).json({ error: "Failed to decline friend request" });
       }
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error declining friend request:", error);
-      res.status(500).json({ error: "Failed to decline friend request" });
-    }
-  });
+    },
+  );
 
   app.get("/api/friends", isAuthenticated, async (req: any, res) => {
     try {
@@ -498,13 +596,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       const friendshipId = req.params.id;
-
       const success = await storage.unfriend(friendshipId, userId);
-      
       if (!success) {
         return res.status(404).json({ error: "Friendship not found" });
       }
-
       res.json({ success: true });
     } catch (error) {
       console.error("Error unfriending:", error);
@@ -524,14 +619,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // -----------------------
+  // Settings
+  // -----------------------
   app.get("/api/settings", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       const user = await storage.getUser(userId);
-
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
+      if (!user) return res.status(404).json({ error: "User not found" });
 
       const settings = {
         firstName: user.firstName || "",
@@ -558,19 +653,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/settings", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
-      const { firstName, lastName, username, email, profileImageUrl } = req.body;
+      const { firstName, lastName, username, email, profileImageUrl } =
+        req.body;
 
       const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
+      if (!user) return res.status(404).json({ error: "User not found" });
 
       const updateData: any = {};
       if (firstName !== undefined) updateData.firstName = firstName;
       if (lastName !== undefined) updateData.lastName = lastName;
       if (username !== undefined) updateData.username = username;
       if (email !== undefined) updateData.email = email;
-      if (profileImageUrl !== undefined) updateData.profileImageUrl = profileImageUrl;
+      if (profileImageUrl !== undefined)
+        updateData.profileImageUrl = profileImageUrl;
 
       if (Object.keys(updateData).length > 0) {
         updateData.updatedAt = new Date();
@@ -600,7 +695,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // -----------------------
+  // HTTP server
+  // -----------------------
   const httpServer = createServer(app);
-
   return httpServer;
 }
