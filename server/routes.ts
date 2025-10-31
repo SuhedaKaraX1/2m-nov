@@ -234,7 +234,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (
           user.onboardingCompleted === 1 &&
-          user.preferredCategories?.length > 0
+          user.preferredCategories &&
+          user.preferredCategories.length > 0
         ) {
           challenges = challenges.filter((c) =>
             (user.preferredCategories as string[]).includes(c.category),
@@ -349,6 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { timeSpent } = bodySchema.parse(req.body);
 
         const historyEntry = await storage.addHistoryEntry(userId, {
+          userId,
           challengeId,
           completedAt: new Date().toISOString(),
           timeSpent,
@@ -719,6 +721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const scheduled = await storage.createScheduledChallenge(userId, {
+        userId,
         challengeId,
         scheduledTime: new Date(scheduledTime),
         status: status || "pending",

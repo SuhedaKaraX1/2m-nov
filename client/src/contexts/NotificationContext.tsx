@@ -20,9 +20,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   } | null>(null);
 
   // Fetch pending scheduled challenges
-  const { data: scheduledChallenges = [] } = useQuery<ScheduledChallenge[]>({
+  const { data: scheduledChallenges = [], refetch: refetchScheduled } = useQuery<ScheduledChallenge[]>({
     queryKey: ["/api/scheduled-challenges"],
-    refetchInterval: 30000, // Check every 30 seconds
+    refetchInterval: 2000, // Check every 2 seconds to keep data fresh
   });
 
   // Check for challenges that need to trigger alarms
@@ -77,8 +77,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         snoozedUntil: snoozeUntil.toISOString(),
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-challenges"] });
+    onSuccess: async () => {
+      // Wait for refetch to complete before proceeding
+      await queryClient.invalidateQueries({ queryKey: ["/api/scheduled-challenges"] });
+      await refetchScheduled();
     },
   });
 
@@ -88,8 +90,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         status: "cancelled",
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-challenges"] });
+    onSuccess: async () => {
+      // Wait for refetch to complete before proceeding
+      await queryClient.invalidateQueries({ queryKey: ["/api/scheduled-challenges"] });
+      await refetchScheduled();
     },
   });
 
@@ -99,8 +103,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         status: "notified",
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-challenges"] });
+    onSuccess: async () => {
+      // Wait for refetch to complete before proceeding
+      await queryClient.invalidateQueries({ queryKey: ["/api/scheduled-challenges"] });
+      await refetchScheduled();
     },
   });
 
@@ -113,17 +119,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setActiveAlarm(null);
   };
 
-  const handleSnooze = () => {
+  const handleSnooze = async () => {
     if (!activeAlarm) return;
 
-    snoozeMutation.mutate(activeAlarm.scheduledChallengeId);
+    await snoozeMutation.mutateAsync(activeAlarm.scheduledChallengeId);
     setActiveAlarm(null);
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (!activeAlarm) return;
 
-    cancelMutation.mutate(activeAlarm.scheduledChallengeId);
+    await cancelMutation.mutateAsync(activeAlarm.scheduledChallengeId);
     setActiveAlarm(null);
   };
 

@@ -953,7 +953,7 @@ export class DatabaseStorage implements IStorage {
   // Scheduled Challenges
   async getScheduledChallenges(userId: string): Promise<ScheduledChallenge[]> {
     const now = new Date();
-    return await db
+    const result = await db
       .select()
       .from(scheduledChallenges)
       .where(
@@ -966,6 +966,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(scheduledChallenges.scheduledTime);
+    return result || [];
   }
 
   async createScheduledChallenge(userId: string, data: InsertScheduledChallenge): Promise<ScheduledChallenge> {

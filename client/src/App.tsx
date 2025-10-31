@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Onboarding from "@/pages/Onboarding";
@@ -61,38 +62,40 @@ function Router() {
   };
 
   return (
-    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full">
-        <AppSidebar />
-        <div className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-4 border-b">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-          </header>
-          <main className="flex-1 overflow-auto">
-            <Switch>
-              <Route path="/" component={Home} />
-              <Route path="/challenge/:id" component={ChallengeDetail} />
-              <Route path="/challenges" component={Challenges} />
-              <Route path="/progress" component={Progress} />
-              <Route path="/history" component={History} />
-              <Route path="/achievements" component={Achievements} />
-              <Route path="/analytics" component={Analytics} />
-              <Route path="/my-challenges" component={MyChallenges} />
-              <Route path="/create-challenge" component={CreateChallenge} />
-              <Route path="/edit-challenge/:id">
-                {(params) => <CreateChallenge editId={params.id} />}
-              </Route>
-              <Route path="/friends" component={Friends} />
-              <Route path="/profile" component={Profile} />
-              <Route path="/settings" component={Settings} />
-              <Route path="/notifications" component={Notifications} />
-              <Route path="/share/achievement/:id" component={ShareAchievement} />
-              <Route component={NotFound} />
-            </Switch>
-          </main>
+    <NotificationProvider>
+      <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-col flex-1">
+            <header className="flex items-center justify-between p-4 border-b">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+            </header>
+            <main className="flex-1 overflow-auto">
+              <Switch>
+                <Route path="/" component={Home} />
+                <Route path="/challenge/:id" component={ChallengeDetail} />
+                <Route path="/challenges" component={Challenges} />
+                <Route path="/progress" component={Progress} />
+                <Route path="/history" component={History} />
+                <Route path="/achievements" component={Achievements} />
+                <Route path="/analytics" component={Analytics} />
+                <Route path="/my-challenges" component={MyChallenges} />
+                <Route path="/create-challenge" component={CreateChallenge} />
+                <Route path="/edit-challenge/:id">
+                  {(params) => <CreateChallenge editId={params.id} />}
+                </Route>
+                <Route path="/friends" component={Friends} />
+                <Route path="/profile" component={Profile} />
+                <Route path="/settings" component={Settings} />
+                <Route path="/notifications" component={Notifications} />
+                <Route path="/share/achievement/:id" component={ShareAchievement} />
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </NotificationProvider>
   );
 }
 
