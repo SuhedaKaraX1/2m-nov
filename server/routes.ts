@@ -696,6 +696,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // -----------------------
+  // Scheduled Challenges
+  // -----------------------
+  app.get("/api/scheduled-challenges", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const scheduled = await storage.getScheduledChallenges(userId);
+      res.json(scheduled);
+    } catch (error) {
+      console.error("Error fetching scheduled challenges:", error);
+      res.status(500).json({ error: "Failed to fetch scheduled challenges" });
+    }
+  });
+
+  app.post("/api/scheduled-challenges", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const { challengeId, scheduledTime, status } = req.body;
+
+      if (!challengeId || !scheduledTime) {
+        return res.status(400).json({ error: "challengeId and scheduledTime are required" });
+      }
+
+      const scheduled = await storage.createScheduledChallenge(userId, {
+        challengeId,
+        scheduledTime: new Date(scheduledTime),
+        status: status || "pending",
+      });
+
+      res.status(201).json(scheduled);
+    } catch (error) {
+      console.error("Error creating scheduled challenge:", error);
+      res.status(500).json({ error: "Failed to create scheduled challenge" });
+    }
+  });
+
+  app.patch("/api/scheduled-challenges/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const { id } = req.params;
+      const updateData = req.body;
+
+      // Convert dates if needed
+      if (updateData.scheduledTime) {
+        updateData.scheduledTime = new Date(updateData.scheduledTime);
+      }
+      if (updateData.snoozedUntil) {
+        updateData.snoozedUntil = new Date(updateData.snoozedUntil);
+      }
+
+      const updated = await storage.updateScheduledChallenge(id, userId, updateData);
+
+      if (!updated) {
+        return res.status(404).json({ error: "Scheduled challenge not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating scheduled challenge:", error);
+      res.status(500).json({ error: "Failed to update scheduled challenge" });
+    }
+  });
+
+  app.delete("/api/scheduled-challenges/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const { id } = req.params;
+
+      const success = await storage.deleteScheduledChallenge(id, userId);
+
+      if (!success) {
+        return res.status(404).json({ error: "Scheduled challenge not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting scheduled challenge:", error);
+      res.status(500).json({ error: "Failed to delete scheduled challenge" });
+    }
+  });
+
+  // -----------------------
   // HTTP server
   // -----------------------
   const httpServer = createServer(app);

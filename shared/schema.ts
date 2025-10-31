@@ -209,3 +209,22 @@ export type FriendWithDetails = {
   status: FriendshipStatus;
   createdAt: Date | null;
 };
+
+// Scheduled challenges - tracks when users want to be reminded/notified for challenges
+export const scheduledChallenges = pgTable("scheduled_challenges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  challengeId: varchar("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
+  scheduledTime: timestamp("scheduled_time").notNull(), // When the challenge alarm should trigger
+  status: text("status").notNull().default("pending"), // "pending", "notified", "snoozed", "cancelled", "completed"
+  snoozedUntil: timestamp("snoozed_until"), // If snoozed, when to show alarm again
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertScheduledChallengeSchema = createInsertSchema(scheduledChallenges).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertScheduledChallenge = z.infer<typeof insertScheduledChallengeSchema>;
+export type ScheduledChallenge = typeof scheduledChallenges.$inferSelect;

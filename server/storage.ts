@@ -17,6 +17,8 @@ import {
   type Friendship,
   type InsertFriendship,
   type FriendWithDetails,
+  type ScheduledChallenge,
+  type InsertScheduledChallenge,
   challenges,
   userProgress,
   challengeHistory,
@@ -24,9 +26,10 @@ import {
   achievements,
   userAchievements,
   friendships,
+  scheduledChallenges,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, or, inArray, gte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (Required for Replit Auth)
@@ -103,6 +106,12 @@ export interface IStorage {
     completedAt: string;
     pointsEarned: number;
   }>>;
+
+  // Scheduled Challenges
+  getScheduledChallenges(userId: string): Promise<any[]>;
+  createScheduledChallenge(userId: string, data: any): Promise<any>;
+  updateScheduledChallenge(id: string, userId: string, data: any): Promise<any>;
+  deleteScheduledChallenge(id: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -939,6 +948,61 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
 
     return activity;
+  }
+
+  // Scheduled Challenges
+  async getScheduledChallenges(userId: string): Promise<ScheduledChallenge[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(scheduledChallenges)
+      .where(
+        and(
+          eq(scheduledChallenges.userId, userId),
+          or(
+            eq(scheduledChallenges.status, "pending"),
+            eq(scheduledChallenges.status, "snoozed")
+          )
+        )
+      )
+      .orderBy(scheduledChallenges.scheduledTime);
+  }
+
+  async createScheduledChallenge(userId: string, data: InsertScheduledChallenge): Promise<ScheduledChallenge> {
+    const [scheduled] = await db
+      .insert(scheduledChallenges)
+      .values({
+        ...data,
+        userId,
+      })
+      .returning();
+    return scheduled;
+  }
+
+  async updateScheduledChallenge(id: string, userId: string, data: Partial<InsertScheduledChallenge>): Promise<ScheduledChallenge | null> {
+    const [updated] = await db
+      .update(scheduledChallenges)
+      .set(data)
+      .where(
+        and(
+          eq(scheduledChallenges.id, id),
+          eq(scheduledChallenges.userId, userId)
+        )
+      )
+      .returning();
+    return updated || null;
+  }
+
+  async deleteScheduledChallenge(id: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(scheduledChallenges)
+      .where(
+        and(
+          eq(scheduledChallenges.id, id),
+          eq(scheduledChallenges.userId, userId)
+        )
+      );
+    return true;
   }
 }
 
