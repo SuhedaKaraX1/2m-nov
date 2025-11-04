@@ -13,3 +13,8 @@
 [x] 13. Verified login and register backend routes work correctly
 [x] 14. Configured workflow with webview output type on port 5000
 [x] 15. Verified application is running successfully and displaying correctly
+[x] 16. Changed default theme to light mode
+[x] 17. Merged Progress, Achievements, Analytics, and History into single Progress page
+[x] 18. Updated sidebar to remove duplicate menu items
+[x] 19. Updated routing to reflect consolidated pages
+[x] 20. Cleaned up unused page files
