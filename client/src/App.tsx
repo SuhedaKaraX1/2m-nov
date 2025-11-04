@@ -85,7 +85,9 @@ function Router() {
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/my-challenges" component={MyChallenges} />
                 <Route path="/create-challenge" component={CreateChallenge} />
-                <Route path="/edit-challenge/:id" component={CreateChallenge} />
+                <Route path="/edit-challenge/:id">
+                  {(params) => <CreateChallenge editId={params.id} />}
+                </Route>
                 <Route path="/friends" component={Friends} />
                 <Route path="/profile" component={Profile} />
                 <Route path="/settings" component={Settings} />

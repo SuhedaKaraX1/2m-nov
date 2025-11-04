@@ -7,3 +7,7 @@
 [x] 7. Added CircularTimer for 2-minute challenges
 [x] 8. Created NotificationProvider for managing alarms
 [x] 9. Added snooze (2 min) and cancel options
+[x] 10. Fixed challenges page - added error handling for scheduled-challenges endpoint
+[x] 11. Fixed logout functionality to properly redirect
+[x] 12. Implemented light/dark theme with ThemeProvider and Settings integration
+[x] 13. Verified login and register backend routes work correctly
