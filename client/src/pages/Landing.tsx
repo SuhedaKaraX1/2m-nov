@@ -1,6 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Activity, Brain, BookOpen, DollarSign, Heart, Clock, Trophy, Flame } from "lucide-react";
+import {
+  Activity,
+  Brain,
+  BookOpen,
+  DollarSign,
+  Heart,
+  Clock,
+  Trophy,
+  Flame,
+  Sword,
+} from "lucide-react";
 
 export default function Landing() {
   return (
@@ -17,12 +27,14 @@ export default function Landing() {
               Transform your life, two minutes at a time
             </p>
             <p className="text-base md:text-lg text-muted-foreground/80 max-w-xl mx-auto">
-              Build better habits through quick daily challenges. Complete 2-minute activities across physical health, mental wellness, learning, finance, and relationships.
+              Build better habits through quick daily challenges. Complete
+              2-minute activities across physical health, mental wellness,
+              learning, finance, and relationships.
             </p>
             <div className="pt-4">
               <Button
                 size="lg"
-                onClick={() => window.location.href = "/api/login"}
+                onClick={() => (window.location.href = "/api/login")}
                 className="text-lg px-8 py-6"
                 data-testid="button-login"
               >
@@ -58,7 +70,8 @@ export default function Landing() {
               </div>
               <h3 className="text-xl font-semibold">Mental Wellness</h3>
               <p className="text-muted-foreground">
-                Meditation, mindfulness, and cognitive exercises for mental clarity
+                Meditation, mindfulness, and cognitive exercises for mental
+                clarity
               </p>
             </CardContent>
           </Card>
@@ -106,7 +119,8 @@ export default function Landing() {
               </div>
               <h3 className="text-xl font-semibold">Just 2 Minutes</h3>
               <p className="text-muted-foreground">
-                Every challenge takes exactly 2 minutes - perfect for any schedule
+                Every challenge takes exactly 2 minutes - perfect for any
+                schedule
               </p>
             </CardContent>
           </Card>
@@ -128,7 +142,8 @@ export default function Landing() {
             <div>
               <h3 className="text-xl font-semibold mb-2">Build Streaks</h3>
               <p className="text-muted-foreground">
-                Complete challenges daily to build momentum. Track your streaks and watch your consistency grow.
+                Complete challenges daily to build momentum. Track your streaks
+                and watch your consistency grow.
               </p>
             </div>
           </div>
@@ -142,7 +157,8 @@ export default function Landing() {
             <div>
               <h3 className="text-xl font-semibold mb-2">Earn Points</h3>
               <p className="text-muted-foreground">
-                Easy challenges earn 10 points, medium 20, and hard 30. Level up your life systematically.
+                Easy challenges earn 10 points, medium 20, and hard 30. Level up
+                your life systematically.
               </p>
             </div>
           </div>
@@ -156,7 +172,8 @@ export default function Landing() {
             <div>
               <h3 className="text-xl font-semibold mb-2">Micro Habits</h3>
               <p className="text-muted-foreground">
-                Small, consistent actions create lasting change. 2 minutes is easy to start, impossible to skip.
+                Small, consistent actions create lasting change. 2 minutes is
+                easy to start, impossible to skip.
               </p>
             </div>
           </div>
@@ -171,11 +188,12 @@ export default function Landing() {
               Ready to get started?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Join thousands building better habits. Your first 2-minute challenge awaits.
+              Join thousands building better habits. Your first 2-minute
+              challenge awaits.
             </p>
             <Button
               size="lg"
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => (window.location.href = "/api/login")}
               className="text-lg px-8 py-6"
               data-testid="button-login-cta"
             >

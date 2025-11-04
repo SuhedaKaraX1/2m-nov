@@ -1,11 +1,28 @@
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useQuery } from "@tanstack/react-query";
 import type { UserProgress } from "@shared/schema";
-import { Trophy, Target, Flame, Star, Activity, Brain, BookOpen, DollarSign, Heart } from "lucide-react";
+import {
+  Trophy,
+  Target,
+  Flame,
+  Star,
+  Activity,
+  Brain,
+  BookOpen,
+  DollarSign,
+  Heart,
+  Sword,
+} from "lucide-react";
 
 const categoryIcons = {
   physical: Activity,
@@ -13,6 +30,7 @@ const categoryIcons = {
   learning: BookOpen,
   finance: DollarSign,
   relationships: Heart,
+  extreme: Sword,
 };
 
 export default function Profile() {
@@ -26,11 +44,16 @@ export default function Profile() {
     return null;
   }
 
-  const initials = `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
+  const initials =
+    `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase() ||
+    user.email?.[0]?.toUpperCase() ||
+    "U";
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6" data-testid="text-profile-title">Profile</h1>
+      <h1 className="text-3xl font-bold mb-6" data-testid="text-profile-title">
+        Profile
+      </h1>
 
       <div className="space-y-6">
         {/* User Info Card */}
@@ -51,11 +74,17 @@ export default function Profile() {
                     ? `${user.firstName} ${user.lastName}`
                     : user.username || "User"}
                 </h2>
-                <p className="text-muted-foreground" data-testid="text-user-email">
+                <p
+                  className="text-muted-foreground"
+                  data-testid="text-user-email"
+                >
                   {user.email}
                 </p>
                 {user.username && (
-                  <p className="text-sm text-muted-foreground" data-testid="text-username">
+                  <p
+                    className="text-sm text-muted-foreground"
+                    data-testid="text-username"
+                  >
                     @{user.username}
                   </p>
                 )}
@@ -69,7 +98,9 @@ export default function Profile() {
           <Card data-testid="card-stats">
             <CardHeader>
               <CardTitle>Your Stats</CardTitle>
-              <CardDescription>Your wellness journey at a glance</CardDescription>
+              <CardDescription>
+                Your wellness journey at a glance
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -78,7 +109,9 @@ export default function Profile() {
                     <Target className="h-4 w-4" />
                     <span className="text-sm">Challenges</span>
                   </div>
-                  <p className="text-2xl font-bold">{progress.totalChallengesCompleted}</p>
+                  <p className="text-2xl font-bold">
+                    {progress.totalChallengesCompleted}
+                  </p>
                 </div>
 
                 <div className="space-y-2" data-testid="stat-streak">
@@ -114,25 +147,35 @@ export default function Profile() {
           <Card data-testid="card-preferences">
             <CardHeader>
               <CardTitle>Your Preferences</CardTitle>
-              <CardDescription>Challenge categories and schedule</CardDescription>
+              <CardDescription>
+                Challenge categories and schedule
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {user.preferredCategories && user.preferredCategories.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Preferred Categories</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {user.preferredCategories.map((category) => {
-                      const Icon = categoryIcons[category as keyof typeof categoryIcons];
-                      return (
-                        <Badge key={category} variant="secondary" data-testid={`badge-category-${category}`}>
-                          {Icon && <Icon className="h-3 w-3 mr-1" />}
-                          {category}
-                        </Badge>
-                      );
-                    })}
+              {user.preferredCategories &&
+                user.preferredCategories.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">
+                      Preferred Categories
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {user.preferredCategories.map((category) => {
+                        const Icon =
+                          categoryIcons[category as keyof typeof categoryIcons];
+                        return (
+                          <Badge
+                            key={category}
+                            variant="secondary"
+                            data-testid={`badge-category-${category}`}
+                          >
+                            {Icon && <Icon className="h-3 w-3 mr-1" />}
+                            {category}
+                          </Badge>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               <Separator />
 
@@ -141,9 +184,21 @@ export default function Profile() {
                   <h3 className="text-sm font-medium mb-2">Challenge Days</h3>
                   <div className="flex flex-wrap gap-2">
                     {user.preferredDays.map((day) => {
-                      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                      const dayNames = [
+                        "Sun",
+                        "Mon",
+                        "Tue",
+                        "Wed",
+                        "Thu",
+                        "Fri",
+                        "Sat",
+                      ];
                       return (
-                        <Badge key={day} variant="outline" data-testid={`badge-day-${day}`}>
+                        <Badge
+                          key={day}
+                          variant="outline"
+                          data-testid={`badge-day-${day}`}
+                        >
                           {dayNames[day]}
                         </Badge>
                       );
@@ -152,17 +207,23 @@ export default function Profile() {
                 </div>
               )}
 
-              {user.hasMentalHealthConcerns === "yes" && user.mentalHealthDetails && (
-                <>
-                  <Separator />
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Mental Health Notes</h3>
-                    <p className="text-sm text-muted-foreground" data-testid="text-mental-health-details">
-                      {user.mentalHealthDetails}
-                    </p>
-                  </div>
-                </>
-              )}
+              {user.hasMentalHealthConcerns === "yes" &&
+                user.mentalHealthDetails && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">
+                        Mental Health Notes
+                      </h3>
+                      <p
+                        className="text-sm text-muted-foreground"
+                        data-testid="text-mental-health-details"
+                      >
+                        {user.mentalHealthDetails}
+                      </p>
+                    </div>
+                  </>
+                )}
             </CardContent>
           </Card>
         )}

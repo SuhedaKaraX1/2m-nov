@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, index, jsonb } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  varchar,
+  integer,
+  timestamp,
+  index,
+  jsonb,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -16,7 +24,9 @@ export const sessions = pgTable(
 
 // Users table (Required for Replit Auth and local auth)
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
   username: varchar("username").unique(),
   password: varchar("password"), // hashed password for local auth
@@ -24,7 +34,9 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   // Onboarding preferences
-  preferredCategories: jsonb("preferred_categories").$type<ChallengeCategory[]>(), // e.g., ["mental", "physical"]
+  preferredCategories: jsonb("preferred_categories").$type<
+    ChallengeCategory[]
+  >(), // e.g., ["mental", "physical"]
   hasMentalHealthConcerns: text("has_mental_health_concerns"), // "yes" or "no"
   mentalHealthDetails: text("mental_health_details"), // specific concerns if any
   preferredDays: jsonb("preferred_days").$type<number[]>(), // e.g., [1,3,5] for Mon, Wed, Fri (0=Sunday, 6=Saturday)
@@ -42,17 +54,20 @@ export const challengeCategories = [
   "mental",
   "learning",
   "finance",
-  "relationships"
+  "relationships",
+  "extreme",
 ] as const;
 
-export type ChallengeCategory = typeof challengeCategories[number];
+export type ChallengeCategory = (typeof challengeCategories)[number];
 
 export const challengeDifficulties = ["easy", "medium", "hard"] as const;
-export type ChallengeDifficulty = typeof challengeDifficulties[number];
+export type ChallengeDifficulty = (typeof challengeDifficulties)[number];
 
 // Challenges table - includes both system and user-created challenges
 export const challenges = pgTable("challenges", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   description: text("description").notNull(),
   category: text("category").notNull(),
@@ -60,7 +75,9 @@ export const challenges = pgTable("challenges", {
   difficulty: text("difficulty").notNull(),
   points: integer("points").notNull().default(10),
   instructions: text("instructions").notNull(),
-  createdBy: varchar("created_by").references(() => users.id, { onDelete: "set null" }), // null = system challenge, userId = user-created
+  createdBy: varchar("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }), // null = system challenge, userId = user-created
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -74,9 +91,16 @@ export type Challenge = typeof challenges.$inferSelect;
 
 // User progress tracking - one row per user
 export const userProgress = pgTable("user_progress", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }), // link to users table
-  totalChallengesCompleted: integer("total_challenges_completed").notNull().default(0),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }), // link to users table
+  totalChallengesCompleted: integer("total_challenges_completed")
+    .notNull()
+    .default(0),
   currentStreak: integer("current_streak").notNull().default(0),
   longestStreak: integer("longest_streak").notNull().default(0),
   totalPoints: integer("total_points").notNull().default(0),
@@ -92,15 +116,23 @@ export type UserProgress = typeof userProgress.$inferSelect;
 
 // Challenge history - one row per completion
 export const challengeHistory = pgTable("challenge_history", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), // link to users table
-  challengeId: varchar("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }), // link to users table
+  challengeId: varchar("challenge_id")
+    .notNull()
+    .references(() => challenges.id, { onDelete: "cascade" }),
   completedAt: text("completed_at").notNull(),
   timeSpent: integer("time_spent").notNull(), // in seconds
   pointsEarned: integer("points_earned").notNull(),
 });
 
-export const insertChallengeHistorySchema = createInsertSchema(challengeHistory).omit({
+export const insertChallengeHistorySchema = createInsertSchema(
+  challengeHistory,
+).omit({
   id: true,
 });
 
@@ -108,8 +140,12 @@ export const createChallengeHistorySchema = insertChallengeHistorySchema.omit({
   userId: true,
 });
 
-export type InsertChallengeHistory = z.infer<typeof insertChallengeHistorySchema>;
-export type CreateChallengeHistory = z.infer<typeof createChallengeHistorySchema>;
+export type InsertChallengeHistory = z.infer<
+  typeof insertChallengeHistorySchema
+>;
+export type CreateChallengeHistory = z.infer<
+  typeof createChallengeHistorySchema
+>;
 export type ChallengeHistory = typeof challengeHistory.$inferSelect;
 
 // Challenge with completion info (for history display)
@@ -120,12 +156,19 @@ export type ChallengeWithDetails = Challenge & {
 };
 
 // Achievement tiers for visual distinction
-export const achievementTiers = ["bronze", "silver", "gold", "platinum"] as const;
-export type AchievementTier = typeof achievementTiers[number];
+export const achievementTiers = [
+  "bronze",
+  "silver",
+  "gold",
+  "platinum",
+] as const;
+export type AchievementTier = (typeof achievementTiers)[number];
 
 // Achievements table - all available achievements
 export const achievements = pgTable("achievements", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description").notNull(),
   icon: text("icon").notNull(), // lucide-react icon name or emoji
@@ -148,14 +191,22 @@ export type Achievement = typeof achievements.$inferSelect;
 
 // User achievements - tracks which achievements users have unlocked
 export const userAchievements = pgTable("user_achievements", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  achievementId: varchar("achievement_id").notNull().references(() => achievements.id, { onDelete: "cascade" }),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  achievementId: varchar("achievement_id")
+    .notNull()
+    .references(() => achievements.id, { onDelete: "cascade" }),
   unlockedAt: timestamp("unlocked_at").defaultNow(),
   progress: integer("progress").default(0), // current progress (used before unlocking)
 });
 
-export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({
+export const insertUserAchievementSchema = createInsertSchema(
+  userAchievements,
+).omit({
   id: true,
   unlockedAt: true,
 });
@@ -174,20 +225,30 @@ export type AchievementWithProgress = Achievement & {
 
 // Friendship status types
 export const friendshipStatuses = ["pending", "accepted", "declined"] as const;
-export type FriendshipStatus = typeof friendshipStatuses[number];
+export type FriendshipStatus = (typeof friendshipStatuses)[number];
 
 // Friendships table - tracks friend relationships
-export const friendships = pgTable("friendships", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  requesterId: varchar("requester_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  receiverId: varchar("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  status: text("status").notNull().default("pending"), // "pending", "accepted", "declined"
-  createdAt: timestamp("created_at").defaultNow(),
-  respondedAt: timestamp("responded_at"),
-}, (table) => [
-  index("idx_friendships_requester").on(table.requesterId),
-  index("idx_friendships_receiver").on(table.receiverId),
-]);
+export const friendships = pgTable(
+  "friendships",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    requesterId: varchar("requester_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    receiverId: varchar("receiver_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pending"), // "pending", "accepted", "declined"
+    createdAt: timestamp("created_at").defaultNow(),
+    respondedAt: timestamp("responded_at"),
+  },
+  (table) => [
+    index("idx_friendships_requester").on(table.requesterId),
+    index("idx_friendships_receiver").on(table.receiverId),
+  ],
+);
 
 export const insertFriendshipSchema = createInsertSchema(friendships).omit({
   id: true,
@@ -212,19 +273,29 @@ export type FriendWithDetails = {
 
 // Scheduled challenges - tracks when users want to be reminded/notified for challenges
 export const scheduledChallenges = pgTable("scheduled_challenges", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  challengeId: varchar("challenge_id").notNull().references(() => challenges.id, { onDelete: "cascade" }),
+  id: varchar("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  userId: varchar("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  challengeId: varchar("challenge_id")
+    .notNull()
+    .references(() => challenges.id, { onDelete: "cascade" }),
   scheduledTime: timestamp("scheduled_time").notNull(), // When the challenge alarm should trigger
   status: text("status").notNull().default("pending"), // "pending", "notified", "snoozed", "cancelled", "completed"
   snoozedUntil: timestamp("snoozed_until"), // If snoozed, when to show alarm again
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertScheduledChallengeSchema = createInsertSchema(scheduledChallenges).omit({
+export const insertScheduledChallengeSchema = createInsertSchema(
+  scheduledChallenges,
+).omit({
   id: true,
   createdAt: true,
 });
 
-export type InsertScheduledChallenge = z.infer<typeof insertScheduledChallengeSchema>;
+export type InsertScheduledChallenge = z.infer<
+  typeof insertScheduledChallengeSchema
+>;
 export type ScheduledChallenge = typeof scheduledChallenges.$inferSelect;

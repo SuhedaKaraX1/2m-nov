@@ -1,4 +1,11 @@
-import { Activity, Brain, BookOpen, DollarSign, Heart } from "lucide-react";
+import {
+  Activity,
+  Brain,
+  BookOpen,
+  DollarSign,
+  Heart,
+  Sword,
+} from "lucide-react";
 import type { ChallengeCategory } from "@shared/schema";
 
 export const categoryConfig: Record<
@@ -39,6 +46,12 @@ export const categoryConfig: Record<
     icon: Heart,
     description: "Strengthen your connections",
     gradient: "from-primary/20 to-primary/5",
+  },
+  extreme: {
+    label: "Extreme",
+    icon: Sword,
+    description: "Test your limits",
+    gradient: "from-red-500/20 to-orange-500/5",
   },
 };
 
