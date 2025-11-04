@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type SettingsData = {
   firstName: string;
@@ -70,6 +71,7 @@ const DEFAULTS: SettingsData = {
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const { data, isLoading } = useQuery<SettingsData>({
     queryKey: ["/api/settings"],
   });
@@ -270,10 +272,11 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <Label>Theme</Label>
               <Select
-                value={form.theme}
-                onValueChange={(v: "system" | "light" | "dark") =>
-                  setForm((f) => ({ ...f, theme: v }))
-                }
+                value={theme}
+                onValueChange={(v: "system" | "light" | "dark") => {
+                  setTheme(v);
+                  setForm((f) => ({ ...f, theme: v }));
+                }}
               >
                 <SelectTrigger data-testid="select-theme">
                   <SelectValue placeholder="Select a theme" />

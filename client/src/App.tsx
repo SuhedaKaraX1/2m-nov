@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Onboarding from "@/pages/Onboarding";
@@ -84,9 +85,7 @@ function Router() {
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/my-challenges" component={MyChallenges} />
                 <Route path="/create-challenge" component={CreateChallenge} />
-                <Route path="/edit-challenge/:id">
-                  {(params) => <CreateChallenge editId={params.id} />}
-                </Route>
+                <Route path="/edit-challenge/:id" component={CreateChallenge} />
                 <Route path="/friends" component={Friends} />
                 <Route path="/profile" component={Profile} />
                 <Route path="/settings" component={Settings} />
@@ -109,10 +108,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

@@ -43,14 +43,18 @@ export function NotificationProvider({
           credentials: "include",
         });
         if (!res.ok) {
+          if (res.status === 401) {
+            return [];
+          }
           throw new Error(
             `Failed to load scheduled challenges (${res.status})`,
           );
         }
         return (await res.json()) as ScheduledChallenge[];
       },
-      refetchInterval: 2000, // 2 saniyede bir tazele
-      staleTime: 1000, // kısa stale süresi
+      refetchInterval: 2000,
+      staleTime: 1000,
+      retry: false,
     });
 
   // Alarm tetikleme kontrolü

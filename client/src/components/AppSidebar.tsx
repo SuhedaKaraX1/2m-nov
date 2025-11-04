@@ -63,15 +63,13 @@ export function AppSidebar() {
 
   async function handleLogout() {
     try {
-      // Bazı kurulumlardaki farklılıklar için POST dene, olmazsa GET dene
       await fetch(LOGOUT_URL, { method: "POST", credentials: "include" }).catch(
         () => fetch(LOGOUT_URL, { method: "GET", credentials: "include" }),
       );
     } catch {
-      // ağ hatasını yoksay – client navigasyonu yine de yapacağız
+      // Ignore network errors
     } finally {
-      // Wouter SPA yönlendirmesi (react-router yok!):
-      navigate("/login", { replace: true });
+      window.location.href = "/";
     }
   }
 
