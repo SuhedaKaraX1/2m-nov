@@ -17,12 +17,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [actualTheme, setActualTheme] = useState<"light" | "dark">(() => {
-    if (theme === "system") {
-      return window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+    const stored = localStorage.getItem("theme") as Theme | null;
+    const initialTheme = stored || "light";
+    
+    if (initialTheme === "system") {
+      const systemIsDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (systemIsDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+      return systemIsDark ? "dark" : "light";
     }
-    return theme === "dark" ? "dark" : "light";
+    
+    if (initialTheme === "dark") {
+      document.documentElement.classList.add("dark");
+      return "dark";
+    } else {
+      document.documentElement.classList.remove("dark");
+      return "light";
+    }
   });
 
   useEffect(() => {

@@ -18,3 +18,6 @@
 [x] 18. Updated sidebar to remove duplicate menu items
 [x] 19. Updated routing to reflect consolidated pages
 [x] 20. Cleaned up unused page files
+[x] 21. Fixed theme system - removed hardcoded dark class from index.html
+[x] 22. Verified light theme works as default
+[x] 23. Verified theme switching works correctly
