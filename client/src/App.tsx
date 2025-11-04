@@ -14,9 +14,6 @@ import Onboarding from "@/pages/Onboarding";
 import ChallengeDetail from "@/pages/ChallengeDetail";
 import Challenges from "@/pages/Challenges";
 import Progress from "@/pages/Progress";
-import History from "@/pages/History";
-import Achievements from "@/pages/Achievements";
-import Analytics from "@/pages/Analytics";
 import CreateChallenge from "@/pages/CreateChallenge";
 import MyChallenges from "@/pages/MyChallenges";
 import Friends from "@/pages/Friends";
@@ -26,7 +23,6 @@ import Settings from "@/pages/Settings";
 import Notifications from "@/pages/Notifications";
 import ShareAchievement from "@/pages/ShareAchievement";
 import NotFound from "@/pages/not-found";
-import { LogOut } from "lucide-react";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -79,10 +75,7 @@ function Router() {
                 <Route path="/challenge/:id" component={ChallengeDetail} />
                 <Route path="/challenges" component={Challenges} />
                 <Route path="/progress" component={Progress} />
-                <Route path="/history" component={History} />
                 <Route path="/journal" component={Journal} />
-                <Route path="/achievements" component={Achievements} />
-                <Route path="/analytics" component={Analytics} />
                 <Route path="/my-challenges" component={MyChallenges} />
                 <Route path="/create-challenge" component={CreateChallenge} />
                 <Route path="/edit-challenge/:id">
