@@ -71,22 +71,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // -----------------------
-  // AUTH: Logout (EKLENDİ)
+  // AUTH: Logout
   // -----------------------
   const doLogout = (req: any, res: any) => {
     try {
-      // Passport logout (callback’li veya senkron olabilir)
       if (typeof req.logout === "function") {
-        // Passport v0.6+
         return req.logout((err: any) => {
           if (err) {
             console.error("Logout error:", err);
             return res.status(500).json({ message: "Logout failed" });
           }
-          // Session’ı kapat
           if (req.session) {
             req.session.destroy(() => {
-              res.clearCookie("connect.sid"); // cookie adı sizin setup’a göre değişebilir
+              res.clearCookie("connect.sid");
               return res.status(200).json({ success: true });
             });
           } else {
@@ -95,8 +92,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       }
-
-      // Fallback: session destroy
       if (req.session) {
         req.session.destroy(() => {
           res.clearCookie("connect.sid");
@@ -113,10 +108,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
   app.post("/api/logout", doLogout);
-  app.get("/api/logout", doLogout); // bazı client’lar GET çağırabilir
+  app.get("/api/logout", doLogout);
 
   // -----------------------
-  // AUTH: Onboarding (FIX)
+  // AUTH: Onboarding
   // -----------------------
   app.post("/api/auth/onboarding", isAuthenticated, async (req: any, res) => {
     try {
@@ -158,7 +153,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/user", async (req: any, res) => {
     try {
       if (!req.isAuthenticated?.() || !req.user) return res.json(null);
-
       const userId = req.user?.claims?.sub || req.user?.id;
       if (!userId) return res.json(null);
 
@@ -176,12 +170,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // -----------------------
   // Public challenge routes
   // -----------------------
-  app.get("/api/challenges", async (_req, res) => {
+  // TEK endpoint: /api/challenges?category=physical|mental|...
+  app.get("/api/challenges", async (req, res) => {
     try {
-      const challenges = await storage.getAllChallenges();
-      res.json(challenges);
-    } catch {
-      res.status(500).json({ error: "Failed to fetch challenges" });
+      const { category } = req.query as { category?: string };
+      const all = await storage.getAllChallenges();
+
+      const payload =
+        category && category !== "all"
+          ? all.filter((c) => c.category === category)
+          : all;
+
+      return res.json(payload);
+    } catch (e) {
+      console.error("Failed to fetch challenges:", e);
+      return res.status(500).json({ error: "Failed to fetch challenges" });
     }
   });
 
@@ -191,7 +194,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!challenge)
         return res.status(404).json({ error: "No challenges available" });
       res.json(challenge);
-    } catch {
+    } catch (e) {
+      console.error("Failed to fetch random challenge:", e);
       res.status(500).json({ error: "Failed to fetch random challenge" });
     }
   });
@@ -202,7 +206,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!challenge)
         return res.status(404).json({ error: "Challenge not found" });
       res.json(challenge);
-    } catch {
+    } catch (e) {
+      console.error("Failed to fetch challenge:", e);
       res.status(500).json({ error: "Failed to fetch challenge" });
     }
   });
@@ -213,13 +218,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.params.category,
       );
       res.json(challenges);
-    } catch {
+    } catch (e) {
+      console.error("Failed to fetch challenges by category:", e);
       res.status(500).json({ error: "Failed to fetch challenges by category" });
     }
   });
 
   // -----------------------
-  // Personalized challenges
+  // Personalized challenges (korundu)
   // -----------------------
   app.get(
     "/api/challenges/personalized",
@@ -240,7 +246,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           challenges = challenges.filter((c) =>
             (user.preferredCategories as string[]).includes(c.category),
           );
-          // Ek filtreler burada uygulanabilir
         }
 
         const shuffled = challenges.sort(() => Math.random() - 0.5);
@@ -532,11 +537,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
         );
         if (!friendship) {
-          return res
-            .status(404)
-            .json({
-              error: "Friend request not found or already responded to",
-            });
+          return res.status(404).json({
+            error: "Friend request not found or already responded to",
+          });
         }
         res.json(friendship);
       } catch (error) {
@@ -558,11 +561,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
         );
         if (!success) {
-          return res
-            .status(404)
-            .json({
-              error: "Friend request not found or already responded to",
-            });
+          return res.status(404).json({
+            error: "Friend request not found or already responded to",
+          });
         }
         res.json({ success: true });
       } catch (error) {
@@ -700,84 +701,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // -----------------------
   // Scheduled Challenges
   // -----------------------
-  app.get("/api/scheduled-challenges", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const scheduled = await storage.getScheduledChallenges(userId);
-      res.json(scheduled);
-    } catch (error) {
-      console.error("Error fetching scheduled challenges:", error);
-      res.status(500).json({ error: "Failed to fetch scheduled challenges" });
-    }
-  });
-
-  app.post("/api/scheduled-challenges", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const { challengeId, scheduledTime, status } = req.body;
-
-      if (!challengeId || !scheduledTime) {
-        return res.status(400).json({ error: "challengeId and scheduledTime are required" });
+  app.get(
+    "/api/scheduled-challenges",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const scheduled = await storage.getScheduledChallenges(userId);
+        res.json(scheduled);
+      } catch (error) {
+        console.error("Error fetching scheduled challenges:", error);
+        res.status(500).json({ error: "Failed to fetch scheduled challenges" });
       }
+    },
+  );
 
-      const scheduled = await storage.createScheduledChallenge(userId, {
-        userId,
-        challengeId,
-        scheduledTime: new Date(scheduledTime),
-        status: status || "pending",
-      });
+  app.post(
+    "/api/scheduled-challenges",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const { challengeId, scheduledTime, status } = req.body;
 
-      res.status(201).json(scheduled);
-    } catch (error) {
-      console.error("Error creating scheduled challenge:", error);
-      res.status(500).json({ error: "Failed to create scheduled challenge" });
-    }
-  });
+        if (!challengeId || !scheduledTime) {
+          return res
+            .status(400)
+            .json({ error: "challengeId and scheduledTime are required" });
+        }
 
-  app.patch("/api/scheduled-challenges/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const { id } = req.params;
-      const updateData = req.body;
+        const scheduled = await storage.createScheduledChallenge(userId, {
+          userId,
+          challengeId,
+          scheduledTime: new Date(scheduledTime),
+          status: status || "pending",
+        });
 
-      // Convert dates if needed
-      if (updateData.scheduledTime) {
-        updateData.scheduledTime = new Date(updateData.scheduledTime);
+        res.status(201).json(scheduled);
+      } catch (error) {
+        console.error("Error creating scheduled challenge:", error);
+        res.status(500).json({ error: "Failed to create scheduled challenge" });
       }
-      if (updateData.snoozedUntil) {
-        updateData.snoozedUntil = new Date(updateData.snoozedUntil);
+    },
+  );
+
+  app.patch(
+    "/api/scheduled-challenges/:id",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const { id } = req.params;
+        const updateData = req.body;
+
+        if (updateData.scheduledTime) {
+          updateData.scheduledTime = new Date(updateData.scheduledTime);
+        }
+        if (updateData.snoozedUntil) {
+          updateData.snoozedUntil = new Date(updateData.snoozedUntil);
+        }
+
+        const updated = await storage.updateScheduledChallenge(
+          id,
+          userId,
+          updateData,
+        );
+
+        if (!updated) {
+          return res
+            .status(404)
+            .json({ error: "Scheduled challenge not found" });
+        }
+
+        res.json(updated);
+      } catch (error) {
+        console.error("Error updating scheduled challenge:", error);
+        res.status(500).json({ error: "Failed to update scheduled challenge" });
       }
+    },
+  );
 
-      const updated = await storage.updateScheduledChallenge(id, userId, updateData);
+  app.delete(
+    "/api/scheduled-challenges/:id",
+    isAuthenticated,
+    async (req: any, res) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        const { id } = req.params;
 
-      if (!updated) {
-        return res.status(404).json({ error: "Scheduled challenge not found" });
+        const success = await storage.deleteScheduledChallenge(id, userId);
+
+        if (!success) {
+          return res
+            .status(404)
+            .json({ error: "Scheduled challenge not found" });
+        }
+
+        res.json({ success: true });
+      } catch (error) {
+        console.error("Error deleting scheduled challenge:", error);
+        res.status(500).json({ error: "Failed to delete scheduled challenge" });
       }
-
-      res.json(updated);
-    } catch (error) {
-      console.error("Error updating scheduled challenge:", error);
-      res.status(500).json({ error: "Failed to update scheduled challenge" });
-    }
-  });
-
-  app.delete("/api/scheduled-challenges/:id", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub || req.user?.id;
-      const { id } = req.params;
-
-      const success = await storage.deleteScheduledChallenge(id, userId);
-
-      if (!success) {
-        return res.status(404).json({ error: "Scheduled challenge not found" });
-      }
-
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Error deleting scheduled challenge:", error);
-      res.status(500).json({ error: "Failed to delete scheduled challenge" });
-    }
-  });
+    },
+  );
 
   // -----------------------
   // HTTP server

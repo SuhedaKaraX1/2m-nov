@@ -5,11 +5,12 @@ import {
   Trophy,
   BarChart3,
   Users,
+  UserIcon,
   Settings,
-  User as UserIcon,
   Plus,
   Menu as MenuIcon,
   Bell,
+  NotebookPen,
   LogOut,
 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -34,6 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import JournalPage from "@/pages/Journal";    
 
 const LOGOUT_URL = "/api/logout"; // Sunucunuz farklıysa (/api/auth/logout) burayı değiştirin.
 
@@ -41,11 +43,12 @@ const menuItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "My Challenges", url: "/challenges", icon: Target },
   { title: "Progress", url: "/progress", icon: TrendingUp },
+  { title: "Journal", url: "/journal", icon: NotebookPen },
   { title: "Achievements", url: "/achievements", icon: Trophy },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "History", url: "/history", icon: MenuIcon },
   { title: "Friends", url: "/friends", icon: Users },
-  { title: "Profile", url: "/profile", icon: Users },
+  { title: "Profile", url: "/profile", icon: UserIcon },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

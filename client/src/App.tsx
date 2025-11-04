@@ -20,10 +20,12 @@ import CreateChallenge from "@/pages/CreateChallenge";
 import MyChallenges from "@/pages/MyChallenges";
 import Friends from "@/pages/Friends";
 import Profile from "@/pages/Profile";
+import Journal from "@/pages/Journal";
 import Settings from "@/pages/Settings";
 import Notifications from "@/pages/Notifications";
 import ShareAchievement from "@/pages/ShareAchievement";
 import NotFound from "@/pages/not-found";
+import { LogOut } from "lucide-react";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -77,6 +79,7 @@ function Router() {
                 <Route path="/challenges" component={Challenges} />
                 <Route path="/progress" component={Progress} />
                 <Route path="/history" component={History} />
+                <Route path="/journal" component={Journal} />
                 <Route path="/achievements" component={Achievements} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/my-challenges" component={MyChallenges} />
@@ -88,7 +91,11 @@ function Router() {
                 <Route path="/profile" component={Profile} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/notifications" component={Notifications} />
-                <Route path="/share/achievement/:id" component={ShareAchievement} />
+                <Route path="/logout" component={Login} />
+                <Route
+                  path="/share/achievement/:id"
+                  component={ShareAchievement}
+                />
                 <Route component={NotFound} />
               </Switch>
             </main>
