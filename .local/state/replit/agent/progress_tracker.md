@@ -11,3 +11,5 @@
 [x] 11. Fixed logout functionality to properly redirect
 [x] 12. Implemented light/dark theme with ThemeProvider and Settings integration
 [x] 13. Verified login and register backend routes work correctly
+[x] 14. Configured workflow with webview output type on port 5000
+[x] 15. Verified application is running successfully and displaying correctly
