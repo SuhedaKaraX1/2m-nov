@@ -65,6 +65,13 @@ async function upsertUser(claims: any) {
 }
 
 export async function setupAuth(app: Express) {
+  // If REPL_ID (client id) is not set, skip OIDC setup so the app can run
+  // without external authentication (useful for local development).
+  if (!process.env.REPL_ID) {
+    console.warn('REPL_ID not set — skipping external OIDC authentication setup');
+    return;
+  }
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -148,6 +155,11 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // If REPL_ID is not configured, authentication is disabled — allow all.
+  if (!process.env.REPL_ID) {
+    return next();
+  }
+
   const user = req.user as any;
 
   if (!req.isAuthenticated()) {

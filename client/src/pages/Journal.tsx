@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type EntryType = "text" | "image" | "video" | "audio" | "file";
 
@@ -50,6 +51,9 @@ const LS_KEY = "journal.media.entries.v1";
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 export default function JournalPage() {
+  // Tema context'ini kullan (Settings ile uyumlu)
+  const { theme } = useTheme();
+
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [query, setQuery] = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -278,36 +282,31 @@ export default function JournalPage() {
 
   // -------- UI --------
   return (
-    <div className="min-h-[calc(100vh-64px)] w-full bg-[#0B0D12] text-white">
+    <div className="min-h-[calc(100vh-64px)] w-full bg-background text-foreground">
       <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Journal</h1>
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               Metin yazın, ses kaydedin veya medya ekleyin. Hepsi tek yerde.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Ara (başlık, metin, etiket, dosya adı)"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-72 border-zinc-800 bg-[#0F1218] pl-9 text-sm placeholder:text-zinc-500"
+                className="w-72 pl-9"
               />
             </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="secondary"
-                  className="border-zinc-800 bg-[#11141b]"
-                >
-                  Etiketler
-                </Button>
+                <Button variant="secondary">Etiketler</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-64">
                 {allTags.length ? (
@@ -323,11 +322,10 @@ export default function JournalPage() {
                       }
                     >
                       <Badge
-                        className={`mr-2 border ${
-                          activeTags.includes(t)
-                            ? "border-teal-400/40 bg-teal-500/10 text-teal-200"
-                            : "border-zinc-700 bg-zinc-900 text-zinc-300"
-                        }`}
+                        className={activeTags.includes(t) ? "mr-2" : "mr-2"}
+                        variant={
+                          activeTags.includes(t) ? "default" : "secondary"
+                        }
                       >
                         <Tag className="mr-1 h-3 w-3" /> {t}
                       </Badge>
@@ -335,7 +333,7 @@ export default function JournalPage() {
                     </DropdownMenuItem>
                   ))
                 ) : (
-                  <div className="px-3 py-2 text-sm text-zinc-500">
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
                     Etiket yok
                   </div>
                 )}
@@ -344,7 +342,6 @@ export default function JournalPage() {
             {(query || activeTags.length) && (
               <Button
                 variant="ghost"
-                className="text-zinc-400 hover:text-zinc-100"
                 onClick={() => {
                   setQuery("");
                   setActiveTags([]);
@@ -358,24 +355,26 @@ export default function JournalPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
           {/* Entries list */}
-          <Card className="border-zinc-800 bg-[#0F1218]">
+          <Card className="bg-card border-border">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm text-zinc-300">Girdiler</CardTitle>
-              <span className="text-xs text-zinc-500">
+              <CardTitle className="text-sm text-muted-foreground">
+                Girdiler
+              </CardTitle>
+              <span className="text-xs text-muted-foreground">
                 {filtered.length} kayıt
               </span>
             </CardHeader>
             <CardContent className="p-0">
               <ScrollArea className="h-[720px]">
-                <div className="divide-y divide-zinc-800">
+                <div className="divide-y">
                   {filtered.length ? (
                     filtered.map((e) => (
-                      <article key={e.id} className="p-4 hover:bg-[#0d1117]">
+                      <article key={e.id} className="p-4 hover:bg-accent/40">
                         <div className="mb-2 flex items-center justify-between">
                           <h3 className="truncate text-base font-medium">
                             {e.title}
                           </h3>
-                          <span className="text-xs text-zinc-500">
+                          <span className="text-xs text-muted-foreground">
                             {new Date(e.date).toLocaleDateString("tr-TR", {
                               day: "2-digit",
                               month: "short",
@@ -387,7 +386,7 @@ export default function JournalPage() {
                         {/* Content preview */}
                         <div className="space-y-3">
                           {e.type === "text" && e.text && (
-                            <p className="whitespace-pre-wrap text-sm leading-6 text-zinc-300">
+                            <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">
                               {e.text}
                             </p>
                           )}
@@ -396,13 +395,13 @@ export default function JournalPage() {
                             <img
                               src={e.mediaDataUrl}
                               alt={e.filename ?? "image"}
-                              className="max-h-72 w-full rounded-lg object-contain ring-1 ring-zinc-800"
+                              className="max-h-72 w-full rounded-lg object-contain ring-1 ring-border"
                             />
                           )}
                           {e.type === "video" && e.mediaDataUrl && (
                             <video
                               controls
-                              className="max-h-80 w-full rounded-lg ring-1 ring-zinc-800"
+                              className="max-h-80 w-full rounded-lg ring-1 ring-border"
                               src={e.mediaDataUrl}
                             />
                           )}
@@ -417,7 +416,7 @@ export default function JournalPage() {
                             <a
                               download={e.filename ?? "file"}
                               href={e.mediaDataUrl}
-                              className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
+                              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                             >
                               <Download className="h-4 w-4" />
                               {e.filename ?? "Dosyayı indir"}
@@ -430,7 +429,7 @@ export default function JournalPage() {
                               <Badge
                                 key={t}
                                 variant="secondary"
-                                className="cursor-pointer border border-zinc-700 bg-zinc-900 text-zinc-300"
+                                className="cursor-pointer"
                                 onClick={() =>
                                   setActiveTags((prev) =>
                                     prev.includes(t) ? prev : [...prev, t],
@@ -447,7 +446,6 @@ export default function JournalPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-zinc-400 hover:text-zinc-100"
                             onClick={() => editEntry(e)}
                             aria-label="Düzenle"
                           >
@@ -456,7 +454,7 @@ export default function JournalPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-red-400 hover:text-red-200"
+                            className="text-destructive hover:text-destructive"
                             onClick={() => removeEntry(e.id)}
                             aria-label="Sil"
                           >
@@ -466,7 +464,7 @@ export default function JournalPage() {
                       </article>
                     ))
                   ) : (
-                    <div className="p-10 text-center text-sm text-zinc-500">
+                    <div className="p-10 text-center text-sm text-muted-foreground">
                       Henüz kayıt yok.
                     </div>
                   )}
@@ -476,9 +474,9 @@ export default function JournalPage() {
           </Card>
 
           {/* Composer */}
-          <Card className="border-zinc-800 bg-[#0F1218]">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm text-zinc-300">
+              <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Plus className="h-4 w-4" />
                 {editingId ? "Girdiyi Düzenle" : "Yeni Girdi"}
               </CardTitle>
@@ -488,19 +486,17 @@ export default function JournalPage() {
                 placeholder="Başlık"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="border-zinc-800 bg-[#0F1218] placeholder:text-zinc-500"
               />
               <Input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="border-zinc-800 bg-[#0F1218] text-sm"
+                className="text-sm"
               />
               <Input
                 placeholder="Etiketler (virgülle ayır)"
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
-                className="border-zinc-800 bg-[#0F1218] placeholder:text-zinc-500"
               />
 
               {/* TEXT */}
@@ -509,12 +505,11 @@ export default function JournalPage() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 rows={6}
-                className="border-zinc-800 bg-[#0F1218] placeholder:text-zinc-500"
               />
 
               {/* FILE PICKER */}
-              <div className="rounded-lg border border-dashed border-zinc-700 p-3">
-                <div className="mb-2 flex items-center gap-2 text-sm text-zinc-300">
+              <div className="rounded-lg border border-dashed p-3">
+                <div className="mb-2 flex items-center gap-2 text-sm">
                   <Upload className="h-4 w-4" />
                   Medya / Dosya (opsiyonel)
                 </div>
@@ -522,10 +517,10 @@ export default function JournalPage() {
                   type="file"
                   accept="image/*,video/*,audio/*,application/pdf"
                   onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-                  className="border-zinc-800 bg-[#0F1218] file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-2 file:text-sm file:text-white"
+                  className="file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-sm"
                 />
                 {/* Quick type hints */}
-                <div className="mt-2 flex flex-wrap gap-2 text-xs text-zinc-500">
+                <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <ImageIcon className="h-3.5 w-3.5" /> Görsel
                   </span>
@@ -543,8 +538,8 @@ export default function JournalPage() {
                 {/* FILE PREVIEW */}
                 {(previewUrl || recPreview) && (
                   <div className="mt-3 space-y-2">
-                    <div className="text-xs text-zinc-400">
-                      Önizleme {filename ? `- ${filename}` : ""}
+                    <div className="text-xs text-muted-foreground">
+                      {`Önizleme${filename ? ` - ${filename}` : ""}`}
                     </div>
                     {recPreview ? (
                       <audio controls src={recPreview} className="w-full" />
@@ -553,12 +548,12 @@ export default function JournalPage() {
                       <img
                         src={previewUrl!}
                         alt={filename ?? "preview"}
-                        className="max-h-60 w-full rounded-lg object-contain ring-1 ring-zinc-800"
+                        className="max-h-60 w-full rounded-lg object-contain ring-1 ring-border"
                       />
                     ) : previewMime?.startsWith("video/") ? (
                       <video
                         controls
-                        className="max-h-64 w-full rounded-lg ring-1 ring-zinc-800"
+                        className="max-h-64 w-full rounded-lg ring-1 ring-border"
                         src={previewUrl!}
                       />
                     ) : previewMime?.startsWith("audio/") ? (
@@ -567,7 +562,8 @@ export default function JournalPage() {
                       <a
                         href={previewUrl}
                         target="_blank"
-                        className="inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
                       >
                         <Download className="h-4 w-4" />
                         {filename ?? "Dosyayı aç"}
@@ -578,13 +574,13 @@ export default function JournalPage() {
               </div>
 
               {/* AUDIO RECORDER */}
-              <div className="rounded-lg border border-zinc-800 bg-[#0F1218] p-3">
+              <div className="rounded-lg border bg-card p-3">
                 <div className="mb-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-zinc-300">
+                  <div className="flex items-center gap-2 text-sm">
                     <Music2 className="h-4 w-4" />
                     Ses Kaydı (opsiyonel)
                   </div>
-                  <div className="text-xs tabular-nums text-zinc-500">
+                  <div className="text-xs tabular-nums text-muted-foreground">
                     {recState === "recording" ? `${recSeconds}s` : ""}
                   </div>
                 </div>
@@ -594,7 +590,7 @@ export default function JournalPage() {
                       type="button"
                       onClick={startRecording}
                       variant="secondary"
-                      className="gap-2 border-zinc-700 bg-[#11141b]"
+                      className="gap-2"
                     >
                       <Mic className="h-4 w-4" />
                       Kayda başla
@@ -603,7 +599,7 @@ export default function JournalPage() {
                     <Button
                       type="button"
                       onClick={stopRecording}
-                      className="gap-2 bg-red-600 hover:bg-red-500"
+                      className="gap-2 bg-red-600 hover:bg-red-500 text-primary-foreground"
                     >
                       <Square className="h-4 w-4" />
                       Durdur
@@ -613,7 +609,7 @@ export default function JournalPage() {
                     <audio controls className="ml-2 w-full" src={recPreview} />
                   )}
                 </div>
-                <p className="mt-2 text-[11px] leading-5 text-zinc-500">
+                <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
                   İpucu: Yüklenen veya kaydedilen ses/video/görseller demoda{" "}
                   <b>data URL</b> olarak saklanır (≈10MB sınırı). Üretimde
                   dosyaları sunucuya veya IndexedDB’ye koymanız önerilir.
@@ -623,18 +619,11 @@ export default function JournalPage() {
               {/* Actions */}
               <div className="flex items-center justify-end gap-2 pt-1">
                 {editingId && (
-                  <Button
-                    variant="ghost"
-                    onClick={resetForm}
-                    className="text-zinc-300 hover:text-zinc-100"
-                  >
+                  <Button variant="ghost" onClick={resetForm}>
                     İptal
                   </Button>
                 )}
-                <Button
-                  onClick={saveEntry}
-                  className="gap-2 bg-sky-600 hover:bg-sky-500"
-                >
+                <Button onClick={saveEntry} className="gap-2">
                   <Plus className="h-4 w-4" />
                   {editingId ? "Kaydet" : "Ekle"}
                 </Button>
