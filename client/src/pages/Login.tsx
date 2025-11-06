@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 import { Zap } from "lucide-react";
 
 export default function Login() {
@@ -27,41 +27,49 @@ export default function Login() {
 
     try {
       if (isLogin) {
-        // Login
-        const response = await apiRequest("POST", "/api/auth/local/login", {
-          emailOrUsername: formData.emailOrUsername,
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.emailOrUsername.includes('@') ? formData.emailOrUsername : `${formData.emailOrUsername}@temp.com`,
           password: formData.password,
         });
 
-        if (response.ok) {
-          window.location.href = "/";
-        } else {
-          const error = await response.json();
+        if (error) {
           toast({
             title: "Login failed",
             description: error.message || "Invalid credentials",
             variant: "destructive",
           });
+        } else if (data.user) {
+          toast({
+            title: "Success",
+            description: "Logged in successfully!",
+          });
+          window.location.href = "/";
         }
       } else {
-        // Register
-        const response = await apiRequest("POST", "/api/auth/register", {
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
-          username: formData.username,
           password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
+          options: {
+            data: {
+              username: formData.username,
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+            },
+          },
         });
 
-        if (response.ok) {
-          window.location.href = "/";
-        } else {
-          const error = await response.json();
+        if (error) {
           toast({
             title: "Registration failed",
             description: error.message || "Could not create account",
             variant: "destructive",
           });
+        } else if (data.user) {
+          toast({
+            title: "Success",
+            description: "Account created! Please check your email to verify your account.",
+          });
+          window.location.href = "/";
         }
       }
     } catch (error) {
@@ -245,14 +253,6 @@ export default function Login() {
               </div>
             </div>
 
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => (window.location.href = "/api/login")}
-              data-testid="button-replit-auth"
-            >
-              Continue with Replit
-            </Button>
           </CardContent>
         </Card>
       </div>
