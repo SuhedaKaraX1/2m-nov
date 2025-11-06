@@ -17,7 +17,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth & seed
   await setupAuth(app);
   setupLocalAuth();
-  await seedDatabase();
+  
+  // Seed database based on which storage is being used
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+    const { seedSupabaseDatabase } = await import("./supabaseSeed");
+    await seedSupabaseDatabase();
+  } else {
+    await seedDatabase();
+  }
 
   // -----------------------
   // AUTH: Register & Login

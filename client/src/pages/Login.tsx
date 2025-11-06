@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
+import { apiRequest } from "@/lib/queryClient";
 import { Zap } from "lucide-react";
 
 export default function Login() {
@@ -27,49 +27,39 @@ export default function Login() {
 
     try {
       if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: formData.emailOrUsername.includes('@') ? formData.emailOrUsername : `${formData.emailOrUsername}@temp.com`,
+        const response = await apiRequest("POST", "/api/auth/local/login", {
+          emailOrUsername: formData.emailOrUsername,
           password: formData.password,
         });
 
-        if (error) {
+        if (response.ok) {
+          window.location.href = "/";
+        } else {
+          const error = await response.json();
           toast({
             title: "Login failed",
             description: error.message || "Invalid credentials",
             variant: "destructive",
           });
-        } else if (data.user) {
-          toast({
-            title: "Success",
-            description: "Logged in successfully!",
-          });
-          window.location.href = "/";
         }
       } else {
-        const { data, error } = await supabase.auth.signUp({
+        const response = await apiRequest("POST", "/api/auth/register", {
           email: formData.email,
+          username: formData.username,
           password: formData.password,
-          options: {
-            data: {
-              username: formData.username,
-              first_name: formData.firstName,
-              last_name: formData.lastName,
-            },
-          },
+          firstName: formData.firstName,
+          lastName: formData.lastName,
         });
 
-        if (error) {
+        if (response.ok) {
+          window.location.href = "/";
+        } else {
+          const error = await response.json();
           toast({
             title: "Registration failed",
             description: error.message || "Could not create account",
             variant: "destructive",
           });
-        } else if (data.user) {
-          toast({
-            title: "Success",
-            description: "Account created! Please check your email to verify your account.",
-          });
-          window.location.href = "/";
         }
       }
     } catch (error) {

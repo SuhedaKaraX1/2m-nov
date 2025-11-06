@@ -1401,7 +1401,7 @@ export const challengeSeedData: InsertChallenge[] = [
 ];
 
 // Achievement seed data
-const achievementSeedData: InsertAchievement[] = [
+export const achievementSeedData: InsertAchievement[] = [
   // Completion Achievements
   {
     name: "First Steps",
