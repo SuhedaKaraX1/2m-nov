@@ -142,14 +142,25 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getRandomChallenge(): Promise<Challenge | undefined> {
+    // Get total count first
+    const { count, error: countError } = await supabase
+      .from('challenges')
+      .select('*', { count: 'exact', head: true });
+    
+    if (countError || !count || count === 0) return undefined;
+    
+    // Calculate random offset
+    const randomOffset = Math.floor(Math.random() * count);
+    
+    // Fetch one record at that offset
     const { data, error } = await supabase
       .from('challenges')
       .select('*')
+      .range(randomOffset, randomOffset)
       .limit(1);
     
     if (error || !data || data.length === 0) return undefined;
-    const randomIndex = Math.floor(Math.random() * data.length);
-    return this.mapChallenge(data[randomIndex]);
+    return this.mapChallenge(data[0]);
   }
 
   async createChallenge(insertChallenge: InsertChallenge, userId: string): Promise<Challenge> {
