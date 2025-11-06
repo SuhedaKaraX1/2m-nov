@@ -1660,4 +1660,8 @@ export async function seedDatabase() {
   }
 }
 
-export const storage = new DatabaseStorage();
+import { SupabaseStorage } from "./supabaseStorage";
+
+export const storage = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY
+  ? new SupabaseStorage()
+  : new DatabaseStorage();
