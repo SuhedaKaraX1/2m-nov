@@ -77,18 +77,25 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage
 
-**ORM**: Drizzle ORM for type-safe database operations.
+**Database Provider**: Supabase PostgreSQL - serverless database with built-in security features.
 
-**Database Provider**: Configured for PostgreSQL (specifically Neon Database serverless).
+**Database Client**: @supabase/supabase-js for server-side and client-side operations.
+
+**Server-Side Access**: Uses service role key (SUPABASE_SERVICE_ROLE_KEY) to bypass Row Level Security (RLS) policies for backend operations.
 
 **Schema Design**:
 - `challenges` table: Stores challenge definitions with title, description, category, subcategory, difficulty, points, and instructions
-- `userProgress` table: Single-row table tracking user stats (total challenges completed, current streak, longest streak, total points, last completed date)
-- `challengeHistory` table: Records each completed challenge with timestamp and time spent
+- `user_progress` table: Tracks per-user stats (total challenges completed, current streak, longest streak, total points, last completed date)
+- `challenge_history` table: Records each completed challenge with timestamp and time spent
+- `achievements` table: Stores achievement definitions with tier, requirements, and unlock conditions
+- `user_achievements` table: Tracks which achievements each user has unlocked
+- `friendships` table: Manages friend connections between users
 
-**In-Memory Fallback**: The `MemStorage` class in `server/storage.ts` provides an in-memory implementation of the storage interface, allowing the application to run without a database for development/testing purposes.
+**Storage Implementation**: The `SupabaseStorage` class in `server/supabaseStorage.ts` implements all CRUD operations using Supabase client, with automatic camelCase ↔ snake_case conversion for database fields.
 
-**Type Safety**: Drizzle-Zod integration generates Zod schemas from database schema for runtime validation.
+**Fallback Options**: The application can fall back to `DatabaseStorage` (Neon DB via Drizzle ORM) or `MemStorage` (in-memory) if Supabase credentials are not available.
+
+**Type Safety**: Shared schema types ensure consistency between frontend and backend operations.
 
 ### Authentication and Authorization
 
@@ -97,9 +104,10 @@ Currently, the application does not implement user authentication. The system tr
 ### External Dependencies
 
 **Database**: 
-- Neon Database (@neondatabase/serverless) - Serverless PostgreSQL
-- Connection via `DATABASE_URL` environment variable
-- Migrations managed through Drizzle Kit (`drizzle.config.ts`)
+- Supabase (@supabase/supabase-js) - PostgreSQL with built-in auth and storage
+- Connection via `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` environment variables
+- Schema defined in `supabase-schema.sql` with Row Level Security policies
+- Fallback support for Neon Database via Drizzle ORM if Supabase credentials not available
 
 **UI Libraries**:
 - Radix UI - Comprehensive set of unstyled, accessible React components
