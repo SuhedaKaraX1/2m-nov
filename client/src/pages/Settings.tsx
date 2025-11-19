@@ -34,6 +34,7 @@ import {
   Camera,
   Save,
   Trash2,
+  Clock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -52,6 +53,8 @@ type SettingsData = {
   profileVisibility: "public" | "friends" | "private";
   dataSharing: boolean;
   profileImageUrl?: string;
+  enableNotifications?: boolean;
+  challengeScheduleTimes?: string[];
 };
 
 const DEFAULTS: SettingsData = {
@@ -67,6 +70,8 @@ const DEFAULTS: SettingsData = {
   profileVisibility: "friends",
   dataSharing: false,
   profileImageUrl: undefined,
+  enableNotifications: false,
+  challengeScheduleTimes: [],
 };
 
 export default function SettingsPage() {
@@ -104,6 +109,31 @@ export default function SettingsPage() {
       toast({
         title: "Error",
         description: error.message || "Could not save settings",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const saveScheduleMutation = useMutation({
+    mutationFn: async (payload: { enableNotifications: boolean; challengeScheduleTimes: string[] }) => {
+      const response = await apiRequest("PUT", "/api/settings/schedule", payload);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save schedule settings");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      toast({
+        title: "Success",
+        description: "Schedule settings saved successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Could not save schedule settings",
         variant: "destructive",
       });
     },
@@ -453,6 +483,99 @@ export default function SettingsPage() {
             >
               <Save className="mr-2 h-4 w-4" />
               {saveMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card
+          className="bg-card/30 border-border rounded-2xl mb-8"
+          data-testid="card-challenge-scheduling"
+        >
+          <CardHeader>
+            <CardTitle className="text-foreground flex items-center gap-2">
+              <Clock className="h-5 w-5 opacity-80" />
+              Challenge Scheduling
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Set up when you want to receive challenge notifications.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Enable scheduled notifications</p>
+                <p className="text-sm text-muted-foreground">
+                  Receive automatic challenge notifications during your selected time slots.
+                </p>
+              </div>
+              <Switch
+                checked={form.enableNotifications ?? false}
+                onCheckedChange={(v) =>
+                  setForm((f) => ({ ...f, enableNotifications: !!v }))
+                }
+                data-testid="switch-enable-notifications"
+              />
+            </div>
+
+            {form.enableNotifications && (
+              <div className="space-y-4 pt-4 border-t">
+                <Label>Active Time Slots (HH:MM format)</Label>
+                <p className="text-sm text-muted-foreground">
+                  Add time slots when you want to receive challenges. For example: 09:00, 14:30, 18:00
+                </p>
+                <div className="space-y-2">
+                  {(form.challengeScheduleTimes || []).map((time, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        type="time"
+                        value={time}
+                        onChange={(e) => {
+                          const newTimes = [...(form.challengeScheduleTimes || [])];
+                          newTimes[index] = e.target.value;
+                          setForm((f) => ({ ...f, challengeScheduleTimes: newTimes }));
+                        }}
+                        data-testid={`input-time-slot-${index}`}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const newTimes = (form.challengeScheduleTimes || []).filter(
+                            (_, i) => i !== index
+                          );
+                          setForm((f) => ({ ...f, challengeScheduleTimes: newTimes }));
+                        }}
+                        data-testid={`button-remove-time-${index}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const newTimes = [...(form.challengeScheduleTimes || []), "09:00"];
+                      setForm((f) => ({ ...f, challengeScheduleTimes: newTimes }));
+                    }}
+                    data-testid="button-add-time-slot"
+                  >
+                    + Add Time Slot
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="justify-end">
+            <Button 
+              onClick={() => saveScheduleMutation.mutate({
+                enableNotifications: form.enableNotifications ?? false,
+                challengeScheduleTimes: form.challengeScheduleTimes ?? [],
+              })}
+              disabled={saveScheduleMutation.isPending}
+              data-testid="button-save-scheduling"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {saveScheduleMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </CardFooter>
         </Card>
