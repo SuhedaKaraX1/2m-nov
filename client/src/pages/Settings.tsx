@@ -54,7 +54,7 @@ type SettingsData = {
   dataSharing: boolean;
   profileImageUrl?: string;
   enableNotifications?: boolean;
-  challengeScheduleTimes?: string[];
+  challengeScheduleTimes?: { start: string; end: string }[];
 };
 
 const DEFAULTS: SettingsData = {
@@ -115,8 +115,15 @@ export default function SettingsPage() {
   });
 
   const saveScheduleMutation = useMutation({
-    mutationFn: async (payload: { enableNotifications: boolean; challengeScheduleTimes: string[] }) => {
-      const response = await apiRequest("PUT", "/api/settings/schedule", payload);
+    mutationFn: async (payload: {
+      enableNotifications: number;
+      challengeScheduleTimes: { start: string; end: string }[];
+    }) => {
+      const response = await apiRequest(
+        "PUT",
+        "/api/settings/schedule",
+        payload,
+      );
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to save schedule settings");
@@ -159,7 +166,12 @@ export default function SettingsPage() {
             </div>
             <h1 className="text-2xl font-bold text-foreground">Settings</h1>
           </div>
-          <Button asChild variant="ghost" size="sm" data-testid="button-back-home">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            data-testid="button-back-home"
+          >
             <Link href="/">Back to Home</Link>
           </Button>
         </div>
@@ -274,7 +286,7 @@ export default function SettingsPage() {
             </div>
           </CardContent>
           <CardFooter className="justify-end">
-            <Button 
+            <Button
               onClick={() => saveMutation.mutate(form)}
               disabled={saveMutation.isPending}
               data-testid="button-save-profile"
@@ -341,7 +353,7 @@ export default function SettingsPage() {
             </div>
           </CardContent>
           <CardFooter className="justify-end">
-            <Button 
+            <Button
               onClick={() => saveMutation.mutate(form)}
               disabled={saveMutation.isPending}
               data-testid="button-save-preferences"
@@ -415,7 +427,7 @@ export default function SettingsPage() {
             </div>
           </CardContent>
           <CardFooter className="justify-end">
-            <Button 
+            <Button
               onClick={() => saveMutation.mutate(form)}
               disabled={saveMutation.isPending}
               data-testid="button-save-notifications"
@@ -476,7 +488,7 @@ export default function SettingsPage() {
             </div>
           </CardContent>
           <CardFooter className="justify-end">
-            <Button 
+            <Button
               onClick={() => saveMutation.mutate(form)}
               disabled={saveMutation.isPending}
               data-testid="button-save-privacy"
@@ -505,7 +517,8 @@ export default function SettingsPage() {
               <div>
                 <p className="font-medium">Enable scheduled notifications</p>
                 <p className="text-sm text-muted-foreground">
-                  Receive automatic challenge notifications during your selected time slots.
+                  Receive automatic challenge notifications during your selected
+                  time slots.
                 </p>
               </div>
               <Switch
@@ -519,31 +532,56 @@ export default function SettingsPage() {
 
             {form.enableNotifications && (
               <div className="space-y-4 pt-4 border-t">
-                <Label>Active Time Slots (HH:MM format)</Label>
+                <Label>Active Time Slots</Label>
                 <p className="text-sm text-muted-foreground">
-                  Add time slots when you want to receive challenges. For example: 09:00, 14:30, 18:00
+                  Add time ranges when you want to receive challenges. For
+                  example: 09:00 to 17:00
                 </p>
                 <div className="space-y-2">
-                  {(form.challengeScheduleTimes || []).map((time, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        type="time"
-                        value={time}
-                        onChange={(e) => {
-                          const newTimes = [...(form.challengeScheduleTimes || [])];
-                          newTimes[index] = e.target.value;
-                          setForm((f) => ({ ...f, challengeScheduleTimes: newTimes }));
-                        }}
-                        data-testid={`input-time-slot-${index}`}
-                      />
+                  {(form.challengeScheduleTimes || []).map((timeSlot, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <div className="flex-1 flex gap-2 items-center">
+                        <Input
+                          type="time"
+                          value={timeSlot.start}
+                          onChange={(e) => {
+                            const newTimes = [...(form.challengeScheduleTimes || [])];
+                            newTimes[index] = { ...newTimes[index], start: e.target.value };
+                            setForm((f) => ({
+                              ...f,
+                              challengeScheduleTimes: newTimes,
+                            }));
+                          }}
+                          className="flex-1"
+                          data-testid={`input-time-start-${index}`}
+                        />
+                        <span className="text-sm text-muted-foreground">to</span>
+                        <Input
+                          type="time"
+                          value={timeSlot.end}
+                          onChange={(e) => {
+                            const newTimes = [...(form.challengeScheduleTimes || [])];
+                            newTimes[index] = { ...newTimes[index], end: e.target.value };
+                            setForm((f) => ({
+                              ...f,
+                              challengeScheduleTimes: newTimes,
+                            }));
+                          }}
+                          className="flex-1"
+                          data-testid={`input-time-end-${index}`}
+                        />
+                      </div>
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={() => {
-                          const newTimes = (form.challengeScheduleTimes || []).filter(
-                            (_, i) => i !== index
-                          );
-                          setForm((f) => ({ ...f, challengeScheduleTimes: newTimes }));
+                          const newTimes = (
+                            form.challengeScheduleTimes || []
+                          ).filter((_, i) => i !== index);
+                          setForm((f) => ({
+                            ...f,
+                            challengeScheduleTimes: newTimes,
+                          }));
                         }}
                         data-testid={`button-remove-time-${index}`}
                       >
@@ -554,8 +592,14 @@ export default function SettingsPage() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      const newTimes = [...(form.challengeScheduleTimes || []), "09:00"];
-                      setForm((f) => ({ ...f, challengeScheduleTimes: newTimes }));
+                      const newTimes = [
+                        ...(form.challengeScheduleTimes || []),
+                        { start: "09:00", end: "17:00" },
+                      ];
+                      setForm((f) => ({
+                        ...f,
+                        challengeScheduleTimes: newTimes,
+                      }));
                     }}
                     data-testid="button-add-time-slot"
                   >
@@ -566,11 +610,17 @@ export default function SettingsPage() {
             )}
           </CardContent>
           <CardFooter className="justify-end">
-            <Button 
-              onClick={() => saveScheduleMutation.mutate({
-                enableNotifications: form.enableNotifications ?? false,
-                challengeScheduleTimes: form.challengeScheduleTimes ?? [],
-              })}
+            <Button
+              onClick={() => {
+                const enableNotificationsNumber = form.enableNotifications
+                  ? 1
+                  : 0;
+
+                saveScheduleMutation.mutate({
+                  enableNotifications: enableNotificationsNumber,
+                  challengeScheduleTimes: form.challengeScheduleTimes || [],
+                });
+              }}
               disabled={saveScheduleMutation.isPending}
               data-testid="button-save-scheduling"
             >
@@ -604,7 +654,8 @@ export default function SettingsPage() {
                 onClick={() => {
                   toast({
                     title: "Not implemented",
-                    description: "Account deletion feature is not yet available",
+                    description:
+                      "Account deletion feature is not yet available",
                     variant: "destructive",
                   });
                 }}
