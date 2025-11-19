@@ -121,8 +121,11 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
       setActiveChallenge((prev) => (prev ? { ...prev, timeRemaining: remaining } : null));
 
       if (remaining <= 0.1 && !isCompletingRef.current) { // Use ref to prevent duplicate calls
-        // Auto-complete as failed if time runs out (ref set inside completeChallenge)
-        completeChallenge(CHALLENGE_DURATION, 'failed');
+        // Auto-complete as failed if time runs out
+        completeChallenge(CHALLENGE_DURATION, 'failed').catch((error) => {
+          console.error('Auto-complete failed:', error);
+          // Keep ref true to prevent retry loop - user must manually complete
+        });
       }
     }, 100);
 
