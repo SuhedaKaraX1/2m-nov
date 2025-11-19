@@ -90,6 +90,8 @@ export class SupabaseStorage implements IStorage {
     hasMentalHealthConcerns?: string;
     mentalHealthDetails?: string;
     preferredDays?: number[];
+    challengeScheduleTimes?: { start: string; end: string }[];
+    enableNotifications?: number;
     onboardingCompleted?: number;
   }): Promise<User> {
     const { data, error } = await supabase
@@ -99,6 +101,8 @@ export class SupabaseStorage implements IStorage {
         has_mental_health_concerns: preferences.hasMentalHealthConcerns,
         mental_health_details: preferences.mentalHealthDetails,
         preferred_days: preferences.preferredDays,
+        challenge_schedule_times: preferences.challengeScheduleTimes,
+        enable_notifications: preferences.enableNotifications,
         onboarding_completed: preferences.onboardingCompleted,
         updated_at: new Date().toISOString(),
       })
@@ -871,6 +875,147 @@ export class SupabaseStorage implements IStorage {
     return !error;
   }
 
+  async getNextScheduledChallenge(userId: string): Promise<(ScheduledChallenge & { challenge: Challenge }) | null> {
+    const now = new Date().toISOString();
+    
+    // Get all eligible challenges: pending, notified, or snoozed with expired snooze time
+    const { data, error } = await supabase
+      .from('scheduled_challenges')
+      .select(`
+        *,
+        challenges (*)
+      `)
+      .eq('user_id', userId)
+      .or(`status.eq.pending,status.eq.notified,and(status.eq.snoozed,snoozed_until.lte.${now})`)
+      .order('scheduled_time', { ascending: true })
+      .limit(1);
+
+    if (error || !data || data.length === 0) return null;
+
+    const challenge = data[0];
+    return {
+      id: challenge.id,
+      userId: challenge.user_id,
+      challengeId: challenge.challenge_id,
+      scheduledTime: new Date(challenge.scheduled_time),
+      status: challenge.status,
+      snoozedUntil: challenge.snoozed_until ? new Date(challenge.snoozed_until) : null,
+      createdAt: challenge.created_at ? new Date(challenge.created_at) : null,
+      challenge: this.mapChallenge(challenge.challenges),
+    };
+  }
+
+  async postponeScheduledChallenge(id: string, userId: string): Promise<ScheduledChallenge> {
+    // Postpone by 2 minutes
+    const snoozedUntil = new Date(Date.now() + 2 * 60 * 1000);
+
+    // Update both status and scheduled_time so postponed challenges move to the end of the queue
+    const { data, error } = await supabase
+      .from('scheduled_challenges')
+      .update({
+        status: 'snoozed',
+        snoozed_until: snoozedUntil.toISOString(),
+        scheduled_time: snoozedUntil.toISOString(), // Move to end of queue
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new Error('CHALLENGE_NOT_FOUND');
+      }
+      throw new Error(error.message);
+    }
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      challengeId: data.challenge_id,
+      scheduledTime: new Date(data.scheduled_time),
+      status: data.status,
+      snoozedUntil: data.snoozed_until ? new Date(data.snoozed_until) : null,
+      createdAt: data.created_at ? new Date(data.created_at) : null,
+    };
+  }
+
+  async cancelScheduledChallenge(id: string, userId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('scheduled_challenges')
+      .update({
+        status: 'cancelled',
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select();
+
+    if (error) return false;
+    return data && data.length > 0;
+  }
+
+  async completeScheduledChallenge(id: string, userId: string, status: 'success' | 'failed'): Promise<ChallengeHistory> {
+    // Get the scheduled challenge first
+    const { data: scheduleData, error: scheduleError } = await supabase
+      .from('scheduled_challenges')
+      .select('*, challenges (*)')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (scheduleError) {
+      if (scheduleError.code === 'PGRST116') {
+        throw new Error('CHALLENGE_NOT_FOUND');
+      }
+      throw new Error(scheduleError.message);
+    }
+
+    if (!scheduleData) {
+      throw new Error('CHALLENGE_NOT_FOUND');
+    }
+
+    // Create history entry
+    const historyEntry = {
+      user_id: userId,
+      challenge_id: scheduleData.challenge_id,
+      completed_at: new Date().toISOString(),
+      time_spent: 120, // 2 minutes in seconds
+      points_earned: status === 'success' ? scheduleData.challenges.points : 0,
+      status: status,
+      postponed_count: 0, // TODO: track postponed count
+      scheduled_time: scheduleData.scheduled_time,
+    };
+
+    const { data: historyData, error: historyError } = await supabase
+      .from('challenge_history')
+      .insert(historyEntry)
+      .select()
+      .single();
+
+    if (historyError) throw new Error(historyError.message);
+
+    // Update scheduled challenge status
+    const { error: updateError } = await supabase
+      .from('scheduled_challenges')
+      .update({ status: 'completed' })
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (updateError) {
+      console.error('Failed to update scheduled challenge status:', updateError);
+    }
+
+    // Update user progress
+    if (status === 'success') {
+      await this.addPoints(userId, scheduleData.challenges.points);
+      await this.incrementStreak(userId);
+    } else {
+      await this.resetStreak(userId);
+    }
+
+    return this.mapChallengeHistory(historyData);
+  }
+
   // Helper mappers to convert snake_case to camelCase
   private mapUser(data: any): User {
     return {
@@ -885,6 +1030,8 @@ export class SupabaseStorage implements IStorage {
       hasMentalHealthConcerns: data.has_mental_health_concerns,
       mentalHealthDetails: data.mental_health_details,
       preferredDays: data.preferred_days,
+      challengeScheduleTimes: data.challenge_schedule_times,
+      enableNotifications: data.enable_notifications,
       onboardingCompleted: data.onboarding_completed,
       createdAt: data.created_at ? new Date(data.created_at) : null,
       updatedAt: data.updated_at ? new Date(data.updated_at) : null,
@@ -949,6 +1096,9 @@ export class SupabaseStorage implements IStorage {
       completedAt: data.completed_at,
       timeSpent: data.time_spent,
       pointsEarned: data.points_earned,
+      status: data.status || 'success',
+      postponedCount: data.postponed_count || 0,
+      scheduledTime: data.scheduled_time ? new Date(data.scheduled_time) : null,
     };
   }
 

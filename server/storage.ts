@@ -48,6 +48,8 @@ export interface IStorage {
     hasMentalHealthConcerns?: string;
     mentalHealthDetails?: string;
     preferredDays?: number[];
+    challengeScheduleTimes?: { start: string; end: string }[];
+    enableNotifications?: number;
     onboardingCompleted?: number;
   }): Promise<User>;
 
@@ -108,9 +110,13 @@ export interface IStorage {
   }>>;
 
   // Scheduled Challenges
-  getScheduledChallenges(userId: string): Promise<any[]>;
-  createScheduledChallenge(userId: string, data: any): Promise<any>;
-  updateScheduledChallenge(id: string, userId: string, data: any): Promise<any>;
+  getScheduledChallenges(userId: string): Promise<ScheduledChallenge[]>;
+  getNextScheduledChallenge(userId: string): Promise<(ScheduledChallenge & { challenge: Challenge }) | null>;
+  createScheduledChallenge(userId: string, data: InsertScheduledChallenge): Promise<ScheduledChallenge>;
+  updateScheduledChallenge(id: string, userId: string, data: Partial<ScheduledChallenge>): Promise<ScheduledChallenge>;
+  postponeScheduledChallenge(id: string, userId: string): Promise<ScheduledChallenge>;
+  cancelScheduledChallenge(id: string, userId: string): Promise<boolean>;
+  completeScheduledChallenge(id: string, userId: string, status: 'success' | 'failed'): Promise<ChallengeHistory>;
   deleteScheduledChallenge(id: string, userId: string): Promise<boolean>;
 }
 

@@ -813,6 +813,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
   // -----------------------
+  // Challenge Alarm & Scheduling
+  // -----------------------
+  
+  // Update user's schedule settings
+  app.put("/api/settings/schedule", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      
+      // Validate request body
+      const settingsSchema = z.object({
+        challengeScheduleTimes: z.array(z.object({
+          start: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/),
+          end: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/),
+        })).optional(),
+        enableNotifications: z.number().min(0).max(1).optional(),
+      });
+
+      const validated = settingsSchema.parse(req.body);
+
+      const updatedUser = await storage.updateUserPreferences(userId, {
+        challengeScheduleTimes: validated.challengeScheduleTimes,
+        enableNotifications: validated.enableNotifications,
+      });
+
+      res.json(updatedUser);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid schedule settings format", details: error.errors });
+      }
+      console.error("Error updating schedule settings:", error);
+      res.status(500).json({ error: "Failed to update schedule settings" });
+    }
+  });
+
+  // Get next scheduled challenge
+  app.get("/api/challenges/scheduled/next", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const nextChallenge = await storage.getNextScheduledChallenge(userId);
+      
+      if (!nextChallenge) {
+        return res.status(404).json({ message: "No scheduled challenges" });
+      }
+
+      res.json(nextChallenge);
+    } catch (error) {
+      console.error("Error getting next scheduled challenge:", error);
+      res.status(500).json({ error: "Failed to get next scheduled challenge" });
+    }
+  });
+
+  // Postpone a scheduled challenge
+  app.post("/api/challenges/scheduled/:id/postpone", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const { id } = req.params;
+
+      const postponed = await storage.postponeScheduledChallenge(id, userId);
+      res.json(postponed);
+    } catch (error: any) {
+      if (error.message === 'CHALLENGE_NOT_FOUND') {
+        return res.status(404).json({ error: "Challenge not found" });
+      }
+      console.error("Error postponing challenge:", error);
+      res.status(500).json({ error: "Failed to postpone challenge" });
+    }
+  });
+
+  // Cancel a scheduled challenge
+  app.post("/api/challenges/scheduled/:id/cancel", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const { id } = req.params;
+
+      const cancelled = await storage.cancelScheduledChallenge(id, userId);
+      
+      if (!cancelled) {
+        return res.status(404).json({ error: "Challenge not found" });
+      }
+
+      res.json({ success: true, message: "Challenge cancelled" });
+    } catch (error) {
+      console.error("Error cancelling challenge:", error);
+      res.status(500).json({ error: "Failed to cancel challenge" });
+    }
+  });
+
+  // Complete a scheduled challenge
+  app.post("/api/challenges/scheduled/:id/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const { id } = req.params;
+      const { status } = req.body; // 'success' or 'failed'
+
+      if (!status || !['success', 'failed'].includes(status)) {
+        return res.status(400).json({ error: "Invalid status. Must be 'success' or 'failed'" });
+      }
+
+      const historyEntry = await storage.completeScheduledChallenge(id, userId, status);
+      res.json(historyEntry);
+    } catch (error: any) {
+      if (error.message === 'CHALLENGE_NOT_FOUND') {
+        return res.status(404).json({ error: "Challenge not found" });
+      }
+      console.error("Error completing challenge:", error);
+      res.status(500).json({ error: "Failed to complete challenge" });
+    }
+  });
+
+  // -----------------------
   // HTTP server
   // -----------------------
   const httpServer = createServer(app);
