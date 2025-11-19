@@ -63,7 +63,7 @@ export function ActiveChallengeModal() {
     const timeSpent = Math.floor((Date.now() - activeChallenge.startTime.getTime()) / 1000);
 
     try {
-      await completeChallenge(timeSpent, status);
+      await completeChallenge(timeSpent, status, false); // Manual complete, allow retry on error
       toast({
         title: status === 'success' ? 'Challenge Completed!' : 'Challenge Failed',
         description:
@@ -74,7 +74,7 @@ export function ActiveChallengeModal() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to complete challenge',
+        description: 'Failed to complete challenge. Please try again.',
         variant: 'destructive',
       });
     } finally {

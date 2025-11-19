@@ -30,7 +30,7 @@ interface ChallengeSchedulerContextType {
   startChallenge: () => void;
   cancelChallenge: () => Promise<void>;
   postponeChallenge: () => Promise<void>;
-  completeChallenge: (timeSpent: number, status: 'success' | 'failed') => Promise<void>;
+  completeChallenge: (timeSpent: number, status: 'success' | 'failed', isAutoComplete?: boolean) => Promise<void>;
 }
 
 const ChallengeSchedulerContext = createContext<ChallengeSchedulerContextType | null>(null);
@@ -122,9 +122,14 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
 
       if (remaining <= 0.1 && !isCompletingRef.current) { // Use ref to prevent duplicate calls
         // Auto-complete as failed if time runs out
-        completeChallenge(CHALLENGE_DURATION, 'failed').catch((error) => {
-          console.error('Auto-complete failed:', error);
-          // Keep ref true to prevent retry loop - user must manually complete
+        completeChallenge(CHALLENGE_DURATION, 'failed', true).catch(() => {
+          // On auto-complete error: Reset state to allow manual completion
+          setActiveChallenge(null);
+          setNotificationState('idle');
+          setNotifiedChallengeId(null);
+          setCountdownSeconds(0);
+          setIsCompletingChallenge(false);
+          isCompletingRef.current = false;
         });
       }
     }, 100);
@@ -200,7 +205,7 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
   }, [activeChallenge, nextChallenge, refetch]);
 
   const completeChallenge = useCallback(
-    async (timeSpent: number, status: 'success' | 'failed') => {
+    async (timeSpent: number, status: 'success' | 'failed', isAutoComplete = false) => {
       if (!activeChallenge || isCompletingRef.current) return;
 
       isCompletingRef.current = true;
@@ -225,7 +230,11 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
       } catch (error) {
         console.error('Error completing challenge:', error);
         setIsCompletingChallenge(false);
-        isCompletingRef.current = false;
+        // Keep ref true for auto-complete to prevent retry loop
+        // Reset ref for manual complete to allow retry
+        if (!isAutoComplete) {
+          isCompletingRef.current = false;
+        }
         throw error;
       }
     },
