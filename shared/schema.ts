@@ -40,6 +40,10 @@ export const users = pgTable("users", {
   hasMentalHealthConcerns: text("has_mental_health_concerns"), // "yes" or "no"
   mentalHealthDetails: text("mental_health_details"), // specific concerns if any
   preferredDays: jsonb("preferred_days").$type<number[]>(), // e.g., [1,3,5] for Mon, Wed, Fri (0=Sunday, 6=Saturday)
+  challengeScheduleTimes: jsonb("challenge_schedule_times").$type<
+    { start: string; end: string }[]
+  >(), // e.g., [{start: "09:00", end: "17:00"}] for 9 AM to 5 PM
+  enableNotifications: integer("enable_notifications").default(1), // 1 = enabled, 0 = disabled
   onboardingCompleted: integer("onboarding_completed").default(0), // 0 = not completed, 1 = completed
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -114,6 +118,10 @@ export const insertUserProgressSchema = createInsertSchema(userProgress).omit({
 export type InsertUserProgress = z.infer<typeof insertUserProgressSchema>;
 export type UserProgress = typeof userProgress.$inferSelect;
 
+// Challenge status types
+export const challengeStatuses = ["success", "failed", "postponed"] as const;
+export type ChallengeStatus = (typeof challengeStatuses)[number];
+
 // Challenge history - one row per completion
 export const challengeHistory = pgTable("challenge_history", {
   id: varchar("id")
@@ -128,6 +136,9 @@ export const challengeHistory = pgTable("challenge_history", {
   completedAt: text("completed_at").notNull(),
   timeSpent: integer("time_spent").notNull(), // in seconds
   pointsEarned: integer("points_earned").notNull(),
+  status: text("status").notNull().default("success"), // "success", "failed", "postponed"
+  postponedCount: integer("postponed_count").notNull().default(0), // how many times postponed
+  scheduledTime: timestamp("scheduled_time"), // when it was originally scheduled
 });
 
 export const insertChallengeHistorySchema = createInsertSchema(

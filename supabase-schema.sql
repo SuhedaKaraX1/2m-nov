@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS users (
   has_mental_health_concerns TEXT,
   mental_health_details TEXT,
   preferred_days JSONB,
+  challenge_schedule_times JSONB,
+  enable_notifications INTEGER DEFAULT 1,
   onboarding_completed INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
@@ -54,7 +56,10 @@ CREATE TABLE IF NOT EXISTS challenge_history (
   challenge_id UUID NOT NULL REFERENCES challenges(id) ON DELETE CASCADE,
   completed_at TEXT NOT NULL,
   time_spent INTEGER NOT NULL,
-  points_earned INTEGER NOT NULL
+  points_earned INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'success',
+  postponed_count INTEGER NOT NULL DEFAULT 0,
+  scheduled_time TIMESTAMP
 );
 
 -- Achievements table
