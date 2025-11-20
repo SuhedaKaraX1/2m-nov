@@ -44,6 +44,7 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
   const [notificationState, setNotificationState] = useState<'idle' | 'countdown' | 'active'>('idle');
   const [countdownSeconds, setCountdownSeconds] = useState(0);
   const [notifiedChallengeId, setNotifiedChallengeId] = useState<string | null>(null);
+  const [dismissedChallengeIds, setDismissedChallengeIds] = useState<Set<string>>(new Set());
   const [isCompletingChallenge, setIsCompletingChallenge] = useState(false);
   const isCompletingRef = useRef(false);
 
@@ -59,6 +60,9 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
   // Check if we should show notification (2 minutes before)
   useEffect(() => {
     if (!nextChallenge || activeChallenge) return;
+    
+    // Skip dismissed challenges
+    if (dismissedChallengeIds.has(nextChallenge.id)) return;
 
     const now = Date.now();
     const scheduledTime = new Date(nextChallenge.scheduledTime).getTime();
@@ -88,7 +92,7 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
       }
       handleChallengeStart();
     }
-  }, [nextChallenge, activeChallenge, notifiedChallengeId, isGranted, notificationState]);
+  }, [nextChallenge, activeChallenge, notifiedChallengeId, dismissedChallengeIds, isGranted, notificationState]);
 
   // Countdown timer (5-4-3-2-1 countdown)
   useEffect(() => {
@@ -117,19 +121,9 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
       const remaining = Math.max(0, CHALLENGE_DURATION - elapsed);
 
       setActiveChallenge((prev) => (prev ? { ...prev, timeRemaining: remaining } : null));
-
-      if (remaining <= 0.1 && !isCompletingRef.current) { // Use ref to prevent duplicate calls
-        // Auto-complete as failed if time runs out
-        completeChallenge(CHALLENGE_DURATION, 'failed', true).catch(() => {
-          // On auto-complete error: Reset state to allow manual completion
-          setActiveChallenge(null);
-          setNotificationState('idle');
-          setNotifiedChallengeId(null);
-          setCountdownSeconds(0);
-          setIsCompletingChallenge(false);
-          isCompletingRef.current = false;
-        });
-      }
+      
+      // Timer finished - just keep at 0, let UI show success/fail buttons
+      // Don't auto-complete, let user choose
     }, 100);
 
     return () => clearInterval(interval);
@@ -169,11 +163,19 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
 
       if (!response.ok) throw new Error('Failed to cancel challenge');
 
+      // Mark as dismissed to prevent re-triggering
+      setDismissedChallengeIds((prev) => new Set(prev).add(targetId));
+      
       setActiveChallenge(null);
       setNotificationState('idle');
-      setNotifiedChallengeId(null);
       setCountdownSeconds(0);
-      refetch();
+      
+      // Don't clear notifiedChallengeId immediately
+      // Wait for refetch to complete
+      await refetch();
+      
+      // Now safe to clear
+      setNotifiedChallengeId(null);
     } catch (error) {
       console.error('Error canceling challenge:', error);
       throw error;
@@ -191,11 +193,18 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
 
       if (!response.ok) throw new Error('Failed to postpone challenge');
 
+      // Mark as dismissed to prevent re-triggering
+      setDismissedChallengeIds((prev) => new Set(prev).add(targetId));
+      
       setActiveChallenge(null);
       setNotificationState('idle');
-      setNotifiedChallengeId(null);
       setCountdownSeconds(0);
-      refetch();
+      
+      // Wait for refetch
+      await refetch();
+      
+      // Now safe to clear
+      setNotifiedChallengeId(null);
     } catch (error) {
       console.error('Error postponing challenge:', error);
       throw error;
@@ -218,13 +227,20 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
 
         if (!response.ok) throw new Error('Failed to complete challenge');
 
+        // Mark as dismissed
+        setDismissedChallengeIds((prev) => new Set(prev).add(activeChallenge.scheduledChallengeId));
+        
         setActiveChallenge(null);
         setNotificationState('idle');
-        setNotifiedChallengeId(null);
         setCountdownSeconds(0);
         setIsCompletingChallenge(false);
         isCompletingRef.current = false;
-        refetch();
+        
+        // Wait for refetch
+        await refetch();
+        
+        // Now safe to clear
+        setNotifiedChallengeId(null);
       } catch (error) {
         console.error('Error completing challenge:', error);
         setIsCompletingChallenge(false);
