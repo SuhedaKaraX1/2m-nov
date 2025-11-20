@@ -957,7 +957,13 @@ export class SupabaseStorage implements IStorage {
     const preferredCategories = userData.preferred_categories || [];
     const timeSlots: { start: string; end: string }[] = userData.challenge_schedule_times || [];
 
-    // Delete old pending/notified challenges to avoid duplicates
+    // Get all existing scheduled challenges (including completed/cancelled)
+    const { data: existingChallenges } = await supabase
+      .from('scheduled_challenges')
+      .select('scheduled_time, status')
+      .eq('user_id', userId);
+
+    // Delete ONLY old pending/notified challenges
     await supabase
       .from('scheduled_challenges')
       .delete()
@@ -996,9 +1002,6 @@ export class SupabaseStorage implements IStorage {
         // Only schedule future challenges within next 48 hours
         const hoursUntil = (scheduledTime.getTime() - now.getTime()) / (1000 * 60 * 60);
         if (hoursUntil > 0 && hoursUntil <= 48) {
-          // Pick random challenge from user's categories
-          const randomChallenge = challenges[Math.floor(Math.random() * challenges.length)];
-          
           // Format as local timestamp (not UTC)
           const year = scheduledTime.getFullYear();
           const month = String(scheduledTime.getMonth() + 1).padStart(2, '0');
@@ -1008,12 +1011,30 @@ export class SupabaseStorage implements IStorage {
           const second = String(scheduledTime.getSeconds()).padStart(2, '0');
           const localTimestamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
           
-          scheduledChallenges.push({
-            user_id: userId,
-            challenge_id: randomChallenge.id,
-            scheduled_time: localTimestamp,
-            status: 'pending',
+          // Check if a challenge already exists for this exact time (any status)
+          const alreadyExists = existingChallenges?.some((existing) => {
+            const existingTime = new Date(existing.scheduled_time);
+            return (
+              existingTime.getFullYear() === scheduledTime.getFullYear() &&
+              existingTime.getMonth() === scheduledTime.getMonth() &&
+              existingTime.getDate() === scheduledTime.getDate() &&
+              existingTime.getHours() === scheduledTime.getHours() &&
+              existingTime.getMinutes() === scheduledTime.getMinutes()
+            );
           });
+
+          // Only create new challenge if none exists for this time slot on this day
+          if (!alreadyExists) {
+            // Pick random challenge from user's categories
+            const randomChallenge = challenges[Math.floor(Math.random() * challenges.length)];
+            
+            scheduledChallenges.push({
+              user_id: userId,
+              challenge_id: randomChallenge.id,
+              scheduled_time: localTimestamp,
+              status: 'pending',
+            });
+          }
         }
       }
     }
