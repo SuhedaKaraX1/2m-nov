@@ -72,8 +72,8 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
     ) {
       setNotificationState('countdown');
       setNotifiedChallengeId(nextChallenge.id);
-      // Seed countdown with actual remaining time
-      setCountdownSeconds(Math.max(0, Math.ceil(timeUntilChallenge / 1000)));
+      // Start with 5 second countdown
+      setCountdownSeconds(5);
 
       if (isGranted) {
         showChallengeNotification(nextChallenge.challenge.title, nextChallenge.id);
@@ -90,25 +90,23 @@ export function ChallengeSchedulerProvider({ children }: { children: ReactNode }
     }
   }, [nextChallenge, activeChallenge, notifiedChallengeId, isGranted, notificationState]);
 
-  // Countdown timer (full remaining time, with 3-2-1 for final seconds)
+  // Countdown timer (5-4-3-2-1 countdown)
   useEffect(() => {
-    if (notificationState !== 'countdown' || !nextChallenge) return;
+    if (notificationState !== 'countdown') return;
 
     const interval = setInterval(() => {
-      const now = Date.now();
-      const scheduledTime = new Date(nextChallenge.scheduledTime).getTime();
-      const secondsRemaining = Math.ceil((scheduledTime - now) / 1000);
-
-      // Always update countdown (not just final 3 seconds)
-      setCountdownSeconds(Math.max(0, secondsRemaining));
-
-      if (secondsRemaining <= 0) {
-        handleChallengeStart();
-      }
-    }, 100);
+      setCountdownSeconds((prev) => {
+        const newCount = prev - 1;
+        if (newCount <= 0) {
+          handleChallengeStart();
+          return 0;
+        }
+        return newCount;
+      });
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [notificationState, nextChallenge]);
+  }, [notificationState]);
 
   // Active challenge timer
   useEffect(() => {

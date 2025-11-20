@@ -158,59 +158,26 @@ export function ActiveChallengeModal() {
     }
   };
 
-  // Countdown screen (3-2-1 before challenge starts)
+  // Countdown screen (5-4-3-2-1 before challenge starts)
   if (notificationState === 'countdown') {
-    const minutes = Math.floor(countdownSeconds / 60);
-    const seconds = countdownSeconds % 60;
-    const showLargeCountdown = countdownSeconds > 0 && countdownSeconds <= 3;
+    const showLargeCountdown = countdownSeconds > 0 && countdownSeconds <= 5;
 
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
         <DialogContent className="max-w-md [&>button]:hidden" data-testid="dialog-countdown">
-          <div className="flex flex-col items-center justify-center space-y-8 py-8">
+          <div className="flex flex-col items-center justify-center space-y-8 py-12">
             <div className="text-center space-y-4">
               <h2 className="text-2xl font-bold">Challenge Yakında Başlıyor!</h2>
               <p className="text-muted-foreground">Hazır ol...</p>
             </div>
 
-            {showLargeCountdown ? (
+            {showLargeCountdown && (
               <div className="relative">
                 <div className="text-9xl font-bold text-primary animate-pulse" data-testid="text-final-countdown">
                   {countdownSeconds}
                 </div>
               </div>
-            ) : (
-              <div className="text-center" data-testid="text-time-remaining">
-                <div className="text-5xl font-bold text-muted-foreground">
-                  {minutes}:{seconds.toString().padStart(2, '0')}
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">kaldı</p>
-              </div>
             )}
-
-            <div className="flex gap-2 w-full">
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                className="flex-1"
-                data-testid="button-cancel-countdown"
-              >
-                <X className="w-4 h-4 mr-2" />
-                İptal
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={handlePostpone}
-                className="flex-1"
-                data-testid="button-postpone-countdown"
-              >
-                <SkipForward className="w-4 h-4 mr-2" />
-                2dk Ertele
-              </Button>
-              <Button onClick={startChallenge} className="flex-1" data-testid="button-start-now">
-                Hemen Başla
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>
