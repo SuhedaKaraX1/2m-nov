@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { useChallengeScheduler } from '@/contexts/ChallengeSchedulerContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Clock, X, SkipForward, Check } from 'lucide-react';
+import { Clock, X, SkipForward, Check, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import confetti from 'canvas-confetti';
+
+type TimerPhase = 'initial' | 'running' | 'finished';
 
 export function ActiveChallengeModal() {
   const {
@@ -19,22 +22,48 @@ export function ActiveChallengeModal() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isCompletingChallenge, setIsCompletingChallenge] = useState(false);
+  const [timerPhase, setTimerPhase] = useState<TimerPhase>('initial');
+  const [showFailureEffect, setShowFailureEffect] = useState(false);
 
   useEffect(() => {
     setIsOpen(notificationState !== 'idle');
+    
+    // Reset phase when modal opens
+    if (notificationState === 'active') {
+      setTimerPhase('initial');
+    }
   }, [notificationState]);
+
+  // Auto-start timer after modal opens (unless user cancels/postpones)
+  useEffect(() => {
+    if (notificationState === 'active' && timerPhase === 'initial') {
+      const autoStartTimer = setTimeout(() => {
+        setTimerPhase('running');
+      }, 100); // Start almost immediately
+
+      return () => clearTimeout(autoStartTimer);
+    }
+  }, [notificationState, timerPhase]);
+
+  // Check when timer finishes
+  useEffect(() => {
+    if (activeChallenge && activeChallenge.timeRemaining <= 0 && timerPhase === 'running') {
+      setTimerPhase('finished');
+    }
+  }, [activeChallenge, timerPhase]);
 
   const handleCancel = async () => {
     try {
       await cancelChallenge();
+      setIsOpen(false);
       toast({
-        title: 'Challenge Cancelled',
-        description: 'The challenge has been cancelled.',
+        title: 'İptal Edildi',
+        description: 'Challenge iptal edildi.',
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to cancel challenge',
+        title: 'Hata',
+        description: 'Challenge iptal edilemedi',
         variant: 'destructive',
       });
     }
@@ -44,16 +73,44 @@ export function ActiveChallengeModal() {
     try {
       await postponeChallenge();
       toast({
-        title: 'Challenge Postponed',
-        description: 'The challenge has been postponed for 2 minutes.',
+        title: 'Ertelendi',
+        description: 'Challenge 2 dakika ertelendi.',
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to postpone challenge',
+        title: 'Hata',
+        description: 'Challenge ertelenemedi',
         variant: 'destructive',
       });
     }
+  };
+
+  const fireConfetti = () => {
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    const frame = () => {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#22c55e', '#10b981', '#86efac'],
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#22c55e', '#10b981', '#86efac'],
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    };
+
+    frame();
   };
 
   const handleComplete = async (status: 'success' | 'failed') => {
@@ -62,19 +119,38 @@ export function ActiveChallengeModal() {
     setIsCompletingChallenge(true);
     const timeSpent = Math.floor((Date.now() - activeChallenge.startTime.getTime()) / 1000);
 
-    try {
-      await completeChallenge(timeSpent, status, false); // Manual complete, allow retry on error
+    if (status === 'success') {
+      fireConfetti();
       toast({
-        title: status === 'success' ? 'Challenge Completed!' : 'Challenge Failed',
-        description:
-          status === 'success'
-            ? `Great job! You earned ${activeChallenge.challenge.points} points.`
-            : 'Better luck next time!',
+        title: '🎉 Tebrikler!',
+        description: `Challenge'ı başarıyla tamamladın! ${activeChallenge.challenge.points} puan kazandın!`,
+        duration: 5000,
       });
+    } else {
+      setShowFailureEffect(true);
+      setTimeout(() => setShowFailureEffect(false), 1000);
+      
+      const encouragingMessages = [
+        'Olsun! Bir dahakine yaparsın 💪',
+        'Sorun değil! Her deneme bir ilerleme 🌟',
+        'Pes etme! Başarı yakın 🚀',
+        'Bir dahaki sefere odaklan! Sen yaparsın 💫',
+      ];
+      const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
+      
+      toast({
+        title: 'Olsun!',
+        description: randomMessage,
+        duration: 4000,
+      });
+    }
+
+    try {
+      await completeChallenge(timeSpent, status, false);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to complete challenge. Please try again.',
+        title: 'Hata',
+        description: 'Challenge tamamlanamadı. Tekrar dene.',
         variant: 'destructive',
       });
     } finally {
@@ -93,8 +169,8 @@ export function ActiveChallengeModal() {
         <DialogContent className="max-w-md [&>button]:hidden" data-testid="dialog-countdown">
           <div className="flex flex-col items-center justify-center space-y-8 py-8">
             <div className="text-center space-y-4">
-              <h2 className="text-2xl font-bold">Challenge Starting Soon!</h2>
-              <p className="text-muted-foreground">Get ready...</p>
+              <h2 className="text-2xl font-bold">Challenge Yakında Başlıyor!</h2>
+              <p className="text-muted-foreground">Hazır ol...</p>
             </div>
 
             {showLargeCountdown ? (
@@ -108,7 +184,7 @@ export function ActiveChallengeModal() {
                 <div className="text-5xl font-bold text-muted-foreground">
                   {minutes}:{seconds.toString().padStart(2, '0')}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">until challenge starts</p>
+                <p className="text-sm text-muted-foreground mt-2">kaldı</p>
               </div>
             )}
 
@@ -120,7 +196,7 @@ export function ActiveChallengeModal() {
                 data-testid="button-cancel-countdown"
               >
                 <X className="w-4 h-4 mr-2" />
-                Cancel
+                İptal
               </Button>
               <Button
                 variant="secondary"
@@ -129,10 +205,10 @@ export function ActiveChallengeModal() {
                 data-testid="button-postpone-countdown"
               >
                 <SkipForward className="w-4 h-4 mr-2" />
-                Postpone 2m
+                2dk Ertele
               </Button>
               <Button onClick={startChallenge} className="flex-1" data-testid="button-start-now">
-                Start Now
+                Hemen Başla
               </Button>
             </div>
           </div>
@@ -153,7 +229,10 @@ export function ActiveChallengeModal() {
 
     return (
       <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="max-w-md [&>button]:hidden" data-testid="dialog-active-challenge">
+        <DialogContent 
+          className={`max-w-md [&>button]:hidden ${showFailureEffect ? 'animate-shake' : ''}`}
+          data-testid="dialog-active-challenge"
+        >
           <DialogHeader>
             <DialogTitle className="text-center text-2xl">{activeChallenge.challenge.title}</DialogTitle>
           </DialogHeader>
@@ -194,7 +273,7 @@ export function ActiveChallengeModal() {
                 </div>
                 <div className="text-sm text-muted-foreground mt-2">
                   <Clock className="w-4 h-4 inline mr-1" />
-                  {activeChallenge.challenge.points} points
+                  {activeChallenge.challenge.points} puan
                 </div>
               </div>
             </div>
@@ -207,53 +286,81 @@ export function ActiveChallengeModal() {
             {/* Instructions */}
             {activeChallenge.challenge.instructions && (
               <div className="w-full bg-muted/30 rounded-lg p-4">
-                <h4 className="font-semibold mb-2">Instructions:</h4>
+                <h4 className="font-semibold mb-2">Talimatlar:</h4>
                 <p className="text-sm text-muted-foreground">{activeChallenge.challenge.instructions}</p>
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="flex gap-2 w-full pt-4">
-              <Button
-                variant="destructive"
-                onClick={handleCancel}
-                className="flex-1"
-                data-testid="button-cancel-challenge"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Cancel
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={handlePostpone}
-                className="flex-1"
-                data-testid="button-postpone-challenge"
-              >
-                <SkipForward className="w-4 h-4 mr-2" />
-                Postpone 2m
-              </Button>
-            </div>
+            {/* Action buttons - Phase based */}
+            {timerPhase === 'initial' && (
+              <div className="flex gap-2 w-full pt-4">
+                <Button
+                  variant="destructive"
+                  onClick={handleCancel}
+                  className="flex-1"
+                  data-testid="button-cancel-challenge"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  İptal
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handlePostpone}
+                  className="flex-1"
+                  data-testid="button-postpone-challenge"
+                >
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  2dk Ertele
+                </Button>
+              </div>
+            )}
 
-            <div className="flex gap-2 w-full">
-              <Button
-                variant="outline"
-                onClick={() => handleComplete('failed')}
-                disabled={isCompletingChallenge}
-                className="flex-1"
-                data-testid="button-complete-failed"
-              >
-                I Couldn't Do It
-              </Button>
-              <Button
-                onClick={() => handleComplete('success')}
-                disabled={isCompletingChallenge}
-                className="flex-1"
-                data-testid="button-complete-success"
-              >
-                <Check className="w-4 h-4 mr-2" />
-                Completed!
-              </Button>
-            </div>
+            {timerPhase === 'running' && (
+              <div className="flex gap-2 w-full pt-4">
+                <Button
+                  variant="outline"
+                  onClick={handleCancel}
+                  className="flex-1"
+                  data-testid="button-cancel-running"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  İptal
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handlePostpone}
+                  className="flex-1"
+                  data-testid="button-postpone-running"
+                >
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  2dk Ertele
+                </Button>
+              </div>
+            )}
+
+            {timerPhase === 'finished' && (
+              <div className="flex gap-2 w-full pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => handleComplete('failed')}
+                  disabled={isCompletingChallenge}
+                  className="flex-1 border-red-500 text-red-500 hover:bg-red-500/10"
+                  data-testid="button-complete-failed"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Yapmadım
+                </Button>
+                <Button
+                  onClick={() => handleComplete('success')}
+                  disabled={isCompletingChallenge}
+                  className="flex-1 bg-green-500 hover:bg-green-600"
+                  data-testid="button-complete-success"
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Yaptım!
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
