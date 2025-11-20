@@ -988,9 +988,10 @@ export class SupabaseStorage implements IStorage {
       targetDate.setDate(targetDate.getDate() + day);
 
       for (const slot of timeSlots) {
-        const [startHour, startMinute] = slot.start.split(':').map(Number);
+        // Parse END time (when alarm should trigger)
+        const [endHour, endMinute] = slot.end.split(':').map(Number);
         const scheduledTime = new Date(targetDate);
-        scheduledTime.setHours(startHour, startMinute, 0, 0);
+        scheduledTime.setHours(endHour, endMinute, 0, 0);
 
         // Only schedule future challenges within next 48 hours
         const hoursUntil = (scheduledTime.getTime() - now.getTime()) / (1000 * 60 * 60);
@@ -998,10 +999,19 @@ export class SupabaseStorage implements IStorage {
           // Pick random challenge from user's categories
           const randomChallenge = challenges[Math.floor(Math.random() * challenges.length)];
           
+          // Format as local timestamp (not UTC)
+          const year = scheduledTime.getFullYear();
+          const month = String(scheduledTime.getMonth() + 1).padStart(2, '0');
+          const day = String(scheduledTime.getDate()).padStart(2, '0');
+          const hour = String(scheduledTime.getHours()).padStart(2, '0');
+          const minute = String(scheduledTime.getMinutes()).padStart(2, '0');
+          const second = String(scheduledTime.getSeconds()).padStart(2, '0');
+          const localTimestamp = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+          
           scheduledChallenges.push({
             user_id: userId,
             challenge_id: randomChallenge.id,
-            scheduled_time: scheduledTime.toISOString(),
+            scheduled_time: localTimestamp,
             status: 'pending',
           });
         }
