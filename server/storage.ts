@@ -118,6 +118,7 @@ export interface IStorage {
   cancelScheduledChallenge(id: string, userId: string): Promise<boolean>;
   completeScheduledChallenge(id: string, userId: string, status: 'success' | 'failed'): Promise<ChallengeHistory>;
   deleteScheduledChallenge(id: string, userId: string): Promise<boolean>;
+  generateScheduledChallengesForUser(userId: string, daysAhead?: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1010,6 +1011,26 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return true;
+  }
+
+  async getNextScheduledChallenge(userId: string): Promise<(ScheduledChallenge & { challenge: Challenge }) | null> {
+    throw new Error("Not implemented in DatabaseStorage - use SupabaseStorage");
+  }
+
+  async postponeScheduledChallenge(id: string, userId: string): Promise<ScheduledChallenge> {
+    throw new Error("Not implemented in DatabaseStorage - use SupabaseStorage");
+  }
+
+  async cancelScheduledChallenge(id: string, userId: string): Promise<boolean> {
+    throw new Error("Not implemented in DatabaseStorage - use SupabaseStorage");
+  }
+
+  async completeScheduledChallenge(id: string, userId: string, status: 'success' | 'failed'): Promise<ChallengeHistory> {
+    throw new Error("Not implemented in DatabaseStorage - use SupabaseStorage");
+  }
+
+  async generateScheduledChallengesForUser(userId: string, daysAhead: number = 1): Promise<void> {
+    throw new Error("Not implemented in DatabaseStorage - use SupabaseStorage");
   }
 }
 

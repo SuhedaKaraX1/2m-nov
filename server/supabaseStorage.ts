@@ -944,6 +944,80 @@ export class SupabaseStorage implements IStorage {
     };
   }
 
+  async generateScheduledChallengesForUser(userId: string, daysAhead: number = 2): Promise<void> {
+    // Get user preferences
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('preferred_categories, challenge_schedule_times')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userData) throw new Error('User not found');
+
+    const preferredCategories = userData.preferred_categories || [];
+    const timeSlots: { start: string; end: string }[] = userData.challenge_schedule_times || [];
+
+    // Delete old pending/notified challenges to avoid duplicates
+    await supabase
+      .from('scheduled_challenges')
+      .delete()
+      .eq('user_id', userId)
+      .in('status', ['pending', 'notified']);
+
+    // If no time slots, just clean up and return
+    if (timeSlots.length === 0) return;
+    if (preferredCategories.length === 0) return;
+
+    // Get challenges matching user's categories
+    const { data: challenges, error: challengesError } = await supabase
+      .from('challenges')
+      .select('*')
+      .in('category', preferredCategories);
+
+    if (challengesError || !challenges || challenges.length === 0) {
+      throw new Error('No challenges found for user categories');
+    }
+
+    // Generate scheduled challenges for upcoming time slots
+    const now = new Date();
+    const scheduledChallenges: any[] = [];
+
+    // Check next 2 days to cover full 24-hour window and beyond
+    for (let day = 0; day <= daysAhead; day++) {
+      const targetDate = new Date(now);
+      targetDate.setDate(targetDate.getDate() + day);
+
+      for (const slot of timeSlots) {
+        const [startHour, startMinute] = slot.start.split(':').map(Number);
+        const scheduledTime = new Date(targetDate);
+        scheduledTime.setHours(startHour, startMinute, 0, 0);
+
+        // Only schedule future challenges within next 48 hours
+        const hoursUntil = (scheduledTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+        if (hoursUntil > 0 && hoursUntil <= 48) {
+          // Pick random challenge from user's categories
+          const randomChallenge = challenges[Math.floor(Math.random() * challenges.length)];
+          
+          scheduledChallenges.push({
+            user_id: userId,
+            challenge_id: randomChallenge.id,
+            scheduled_time: scheduledTime.toISOString(),
+            status: 'pending',
+          });
+        }
+      }
+    }
+
+    // Insert all scheduled challenges at once
+    if (scheduledChallenges.length > 0) {
+      const { error: insertError } = await supabase
+        .from('scheduled_challenges')
+        .insert(scheduledChallenges);
+
+      if (insertError) throw new Error(insertError.message);
+    }
+  }
+
   async cancelScheduledChallenge(id: string, userId: string): Promise<boolean> {
     const { data, error } = await supabase
       .from('scheduled_challenges')

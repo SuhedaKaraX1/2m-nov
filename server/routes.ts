@@ -837,6 +837,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enableNotifications: validated.enableNotifications,
       });
 
+      // Auto-generate scheduled challenges based on new time slots
+      // Always call this - it will clean up old challenges if time slots are cleared
+      try {
+        await storage.generateScheduledChallengesForUser(userId, 2); // Generate for next 48 hours
+      } catch (genError) {
+        console.error("Error generating scheduled challenges:", genError);
+        // Don't fail the whole request, just log the error
+      }
+
       res.json(updatedUser);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
