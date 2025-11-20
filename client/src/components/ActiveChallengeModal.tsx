@@ -345,6 +345,9 @@ export function ActiveChallengeModal() {
       {resultDialogOpen && (
         <Dialog open={resultDialogOpen} onOpenChange={handleCloseResultDialog}>
           <DialogContent className="max-w-md" data-testid="dialog-result">
+            <DialogTitle className="sr-only">
+              {resultStatus === 'success' ? 'Başarılı Tamamlama' : 'Tamamlama Sonucu'}
+            </DialogTitle>
             <Button
               variant="ghost"
               size="icon"
