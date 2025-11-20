@@ -878,7 +878,10 @@ export class SupabaseStorage implements IStorage {
   async getNextScheduledChallenge(userId: string): Promise<(ScheduledChallenge & { challenge: Challenge }) | null> {
     const now = new Date().toISOString();
     
-    // Get all eligible challenges: pending, notified, or snoozed with expired snooze time
+    // Get all eligible challenges:
+    // - pending, notified: always eligible
+    // - snoozed: only if snoozed_until has passed
+    // - cancelled: never eligible (permanently excluded)
     const { data, error } = await supabase
       .from('scheduled_challenges')
       .select(`
@@ -886,6 +889,7 @@ export class SupabaseStorage implements IStorage {
         challenges (*)
       `)
       .eq('user_id', userId)
+      .neq('status', 'cancelled')
       .or(`status.eq.pending,status.eq.notified,and(status.eq.snoozed,snoozed_until.lte.${now})`)
       .order('scheduled_time', { ascending: true })
       .limit(1);
