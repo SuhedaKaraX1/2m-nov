@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
 
 type TimerPhase = 'initial' | 'running' | 'finished';
+type ResultStatus = 'success' | 'failed' | null;
 
 export function ActiveChallengeModal() {
   const {
@@ -24,6 +25,9 @@ export function ActiveChallengeModal() {
   const [isCompletingChallenge, setIsCompletingChallenge] = useState(false);
   const [timerPhase, setTimerPhase] = useState<TimerPhase>('initial');
   const [showFailureEffect, setShowFailureEffect] = useState(false);
+  const [resultDialogOpen, setResultDialogOpen] = useState(false);
+  const [resultStatus, setResultStatus] = useState<ResultStatus>(null);
+  const [earnedPoints, setEarnedPoints] = useState(0);
 
   useEffect(() => {
     setIsOpen(notificationState !== 'idle');
@@ -119,30 +123,17 @@ export function ActiveChallengeModal() {
     setIsCompletingChallenge(true);
     const timeSpent = Math.floor((Date.now() - activeChallenge.startTime.getTime()) / 1000);
 
+    // Close the challenge modal immediately
+    setIsOpen(false);
+
+    // Show result dialog
+    setResultStatus(status);
+    setEarnedPoints(status === 'success' ? activeChallenge.challenge.points : 0);
+    setResultDialogOpen(true);
+
+    // Fire confetti for success
     if (status === 'success') {
       fireConfetti();
-      toast({
-        title: '🎉 Tebrikler!',
-        description: `Challenge'ı başarıyla tamamladın! ${activeChallenge.challenge.points} puan kazandın!`,
-        duration: 5000,
-      });
-    } else {
-      setShowFailureEffect(true);
-      setTimeout(() => setShowFailureEffect(false), 1000);
-      
-      const encouragingMessages = [
-        'Olsun! Bir dahakine yaparsın 💪',
-        'Sorun değil! Her deneme bir ilerleme 🌟',
-        'Pes etme! Başarı yakın 🚀',
-        'Bir dahaki sefere odaklan! Sen yaparsın 💫',
-      ];
-      const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
-      
-      toast({
-        title: 'Olsun!',
-        description: randomMessage,
-        duration: 4000,
-      });
     }
 
     try {
@@ -156,6 +147,12 @@ export function ActiveChallengeModal() {
     } finally {
       setIsCompletingChallenge(false);
     }
+  };
+
+  const handleCloseResultDialog = () => {
+    setResultDialogOpen(false);
+    setResultStatus(null);
+    setEarnedPoints(0);
   };
 
   // Countdown screen (5-4-3-2-1 before challenge starts)
@@ -334,5 +331,61 @@ export function ActiveChallengeModal() {
     );
   }
 
-  return null;
+  // Result dialog (success or failure)
+  const encouragingMessages = [
+    'Olsun! Bir dahakine yaparsın 💪',
+    'Sorun değil! Her deneme bir ilerleme 🌟',
+    'Pes etme! Başarı yakın 🚀',
+    'Bir dahaki sefere odaklan! Sen yaparsın 💫',
+  ];
+  const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
+
+  return (
+    <>
+      {resultDialogOpen && (
+        <Dialog open={resultDialogOpen} onOpenChange={handleCloseResultDialog}>
+          <DialogContent className="max-w-md" data-testid="dialog-result">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-4 top-4"
+              onClick={handleCloseResultDialog}
+              data-testid="button-close-result"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
+            <div className="flex flex-col items-center justify-center space-y-6 py-8">
+              {resultStatus === 'success' ? (
+                <>
+                  <div className="text-6xl">🎉</div>
+                  <div className="text-center space-y-2">
+                    <h2 className="text-3xl font-bold text-green-500">Tebrikler!</h2>
+                    <p className="text-lg">Challenge'ı başarıyla tamamladın!</p>
+                    <p className="text-2xl font-bold text-primary">{earnedPoints} puan kazandın!</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-6xl">💪</div>
+                  <div className="text-center space-y-2">
+                    <h2 className="text-3xl font-bold">Olsun!</h2>
+                    <p className="text-lg">{randomMessage}</p>
+                  </div>
+                </>
+              )}
+
+              <Button
+                onClick={handleCloseResultDialog}
+                className="w-full"
+                data-testid="button-result-ok"
+              >
+                Tamam
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
+  );
 }
