@@ -51,7 +51,7 @@ export default function App() {
       <SafeAreaView style={styles.container}>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.header}>⚡ 2Mins Challenge</Text>
-          <Text style={styles.subtitle}>Mobil Uygulama - React Native with Expo</Text>
+          <Text style={styles.subtitle}>Mobile App - React Native</Text>
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>🎯 Hoş Geldiniz!</Text>
@@ -73,18 +73,18 @@ export default function App() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>✨ Web Modunda Çalışıyor</Text>
+            <Text style={styles.cardTitle}>🚀 Başlamak İçin</Text>
             <Text style={styles.cardText}>
-              Replit'te Expo uygulaması web modunda çalışmaktadır. Telefonunuzda test etmek için Expo Go uygulamasını kullanabilirsiniz.
+              1. Terminalde: npm run web{'\n'}
+              2. Tarayıcıda localhost:19006{'\n'}
+              3. Veya QR kodu Expo Go ile tarayın
             </Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🚀 Başlamak İçin</Text>
+            <Text style={styles.cardTitle}>✨ Web Modunda</Text>
             <Text style={styles.cardText}>
-              1. cd mobile{'\n'}
-              2. npx expo start --web{'\n'}
-              3. Tarayıcıda http://localhost:19006
+              Replit'te Expo uygulaması web modunda çalışmaktadır. Telefonunuzda test etmek için Expo Go uygulamasını kullanabilirsiniz.
             </Text>
           </View>
         </ScrollView>
