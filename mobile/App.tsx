@@ -1,86 +1,94 @@
-import { useCallback, useEffect, useState } from 'react';
+import React from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClientProvider } from '@tanstack/react-query';
-import * as SplashScreen from 'expo-splash-screen';
-import * as Font from 'expo-font';
-import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_700Bold,
-} from '@expo-google-fonts/dm-sans';
 
-import { queryClient } from './src/utils/queryClient';
-import { AuthProvider } from './src/contexts/AuthContext';
-import RootNavigator from './src/navigation/RootNavigator';
-
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+  },
+  content: {
+    padding: 20,
+  },
+  header: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 8,
+    marginTop: 20,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#9ca3af',
+    marginBottom: 30,
+  },
+  card: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#2d2d2d',
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#3b82f6',
+    marginBottom: 8,
+  },
+  cardText: {
+    fontSize: 14,
+    color: '#d1d5db',
+    lineHeight: 22,
+  },
+});
 
 export default function App() {
-  const [appIsReady, setAppIsReady] = useState(false);
-
-  let [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_700Bold,
-  });
-
-  useEffect(() => {
-    async function prepare() {
-      try {
-        // Pre-load fonts, make any API calls you need to do here
-        await Font.loadAsync({
-          Inter_400Regular,
-          Inter_500Medium,
-          Inter_600SemiBold,
-          Inter_700Bold,
-          DMSans_400Regular,
-          DMSans_500Medium,
-          DMSans_700Bold,
-        });
-      } catch (e) {
-        console.warn(e);
-      } finally {
-        setAppIsReady(true);
-      }
-    }
-
-    prepare();
-  }, []);
-
-  const onLayoutRootView = useCallback(async () => {
-    if (appIsReady && fontsLoaded) {
-      await SplashScreen.hideAsync();
-    }
-  }, [appIsReady, fontsLoaded]);
-
-  if (!appIsReady || !fontsLoaded) {
-    return null;
-  }
-
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-            <StatusBar style="light" />
-            <RootNavigator />
+      <StatusBar style="light" />
+      <SafeAreaView style={styles.container}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <Text style={styles.header}>⚡ 2Mins Challenge</Text>
+          <Text style={styles.subtitle}>Mobil Uygulama - React Native with Expo</Text>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🎯 Hoş Geldiniz!</Text>
+            <Text style={styles.cardText}>
+              2 dakikalık görevlerle daha iyi alışkanlıklar oluşturun. Fiziksel sağlık, mental wellness, öğrenme, finans ve ilişkiler alanlarında başarı kazanın.
+            </Text>
           </View>
-        </AuthProvider>
-      </QueryClientProvider>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📱 Mobil Özellikler</Text>
+            <Text style={styles.cardText}>
+              • Günlük challenge alarmları{'\n'}
+              • Gerçek zamanlı ilerleme takibi{'\n'}
+              • Başarı rozetleri ve puanlar{'\n'}
+              • Seri tutma sistemi{'\n'}
+              • İstatistik ve analitik{'\n'}
+              • Motive edici mesajlar
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>✨ Web Modunda Çalışıyor</Text>
+            <Text style={styles.cardText}>
+              Replit'te Expo uygulaması web modunda çalışmaktadır. Telefonunuzda test etmek için Expo Go uygulamasını kullanabilirsiniz.
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🚀 Başlamak İçin</Text>
+            <Text style={styles.cardText}>
+              1. cd mobile{'\n'}
+              2. npx expo start --web{'\n'}
+              3. Tarayıcıda http://localhost:19006
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </SafeAreaProvider>
   );
 }
