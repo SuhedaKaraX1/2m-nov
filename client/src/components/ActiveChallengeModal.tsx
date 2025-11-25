@@ -155,29 +155,89 @@ export function ActiveChallengeModal() {
     setEarnedPoints(0);
   };
 
+  // Result dialog - ALWAYS render this first (before early returns)
+  const encouragingMessages = [
+    'Olsun! Bir dahakine yaparsın 💪',
+    'Sorun değil! Her deneme bir ilerleme 🌟',
+    'Pes etme! Başarı yakın 🚀',
+    'Bir dahaki sefere odaklan! Sen yaparsın 💫',
+  ];
+  const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
+
+  const ResultDialog = () => (
+    <Dialog open={resultDialogOpen} onOpenChange={handleCloseResultDialog}>
+      <DialogContent className="max-w-md" data-testid="dialog-result">
+        <DialogTitle className="sr-only">
+          {resultStatus === 'success' ? 'Başarılı Tamamlama' : 'Tamamlama Sonucu'}
+        </DialogTitle>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute right-4 top-4"
+          onClick={handleCloseResultDialog}
+          data-testid="button-close-result"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+
+        <div className="flex flex-col items-center justify-center space-y-6 py-8">
+          {resultStatus === 'success' ? (
+            <>
+              <div className="text-6xl">🎉</div>
+              <div className="text-center space-y-2">
+                <h2 className="text-3xl font-bold text-green-500">Tebrikler!</h2>
+                <p className="text-lg">Challenge'ı başarıyla tamamladın!</p>
+                <p className="text-2xl font-bold text-primary">{earnedPoints} puan kazandın!</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-6xl">💪</div>
+              <div className="text-center space-y-2">
+                <h2 className="text-3xl font-bold">Olsun!</h2>
+                <p className="text-lg">{randomMessage}</p>
+              </div>
+            </>
+          )}
+
+          <Button
+            onClick={handleCloseResultDialog}
+            className="w-full"
+            data-testid="button-result-ok"
+          >
+            Tamam
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   // Countdown screen (5-4-3-2-1 before challenge starts)
   if (notificationState === 'countdown') {
     const showLargeCountdown = countdownSeconds > 0 && countdownSeconds <= 5;
 
     return (
-      <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent className="max-w-md [&>button]:hidden" data-testid="dialog-countdown">
-          <div className="flex flex-col items-center justify-center space-y-8 py-12">
-            <div className="text-center space-y-4">
-              <h2 className="text-2xl font-bold">Challenge Yakında Başlıyor!</h2>
-              <p className="text-muted-foreground">Hazır ol...</p>
-            </div>
-
-            {showLargeCountdown && (
-              <div className="relative">
-                <div className="text-9xl font-bold text-primary animate-pulse" data-testid="text-final-countdown">
-                  {countdownSeconds}
-                </div>
+      <>
+        {resultDialogOpen && <ResultDialog />}
+        <Dialog open={isOpen} onOpenChange={() => {}}>
+          <DialogContent className="max-w-md [&>button]:hidden" data-testid="dialog-countdown">
+            <div className="flex flex-col items-center justify-center space-y-8 py-12">
+              <div className="text-center space-y-4">
+                <h2 className="text-2xl font-bold">Challenge Yakında Başlıyor!</h2>
+                <p className="text-muted-foreground">Hazır ol...</p>
               </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+
+              {showLargeCountdown && (
+                <div className="relative">
+                  <div className="text-9xl font-bold text-primary animate-pulse" data-testid="text-final-countdown">
+                    {countdownSeconds}
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
@@ -192,11 +252,13 @@ export function ActiveChallengeModal() {
     const color = `hsl(${hue}, 70%, 50%)`;
 
     return (
-      <Dialog open={isOpen} onOpenChange={() => {}}>
-        <DialogContent 
-          className={`max-w-md [&>button]:hidden ${showFailureEffect ? 'animate-shake' : ''}`}
-          data-testid="dialog-active-challenge"
-        >
+      <>
+        {resultDialogOpen && <ResultDialog />}
+        <Dialog open={isOpen} onOpenChange={() => {}}>
+          <DialogContent 
+            className={`max-w-md [&>button]:hidden ${showFailureEffect ? 'animate-shake' : ''}`}
+            data-testid="dialog-active-challenge"
+          >
           <DialogHeader>
             <DialogTitle className="text-center text-2xl">{activeChallenge.challenge.title}</DialogTitle>
           </DialogHeader>
@@ -328,67 +390,10 @@ export function ActiveChallengeModal() {
           </div>
         </DialogContent>
       </Dialog>
+      </>
     );
   }
 
-  // Result dialog (success or failure)
-  const encouragingMessages = [
-    'Olsun! Bir dahakine yaparsın 💪',
-    'Sorun değil! Her deneme bir ilerleme 🌟',
-    'Pes etme! Başarı yakın 🚀',
-    'Bir dahaki sefere odaklan! Sen yaparsın 💫',
-  ];
-  const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
-
-  return (
-    <>
-      {resultDialogOpen && (
-        <Dialog open={resultDialogOpen} onOpenChange={handleCloseResultDialog}>
-          <DialogContent className="max-w-md" data-testid="dialog-result">
-            <DialogTitle className="sr-only">
-              {resultStatus === 'success' ? 'Başarılı Tamamlama' : 'Tamamlama Sonucu'}
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-4"
-              onClick={handleCloseResultDialog}
-              data-testid="button-close-result"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-
-            <div className="flex flex-col items-center justify-center space-y-6 py-8">
-              {resultStatus === 'success' ? (
-                <>
-                  <div className="text-6xl">🎉</div>
-                  <div className="text-center space-y-2">
-                    <h2 className="text-3xl font-bold text-green-500">Tebrikler!</h2>
-                    <p className="text-lg">Challenge'ı başarıyla tamamladın!</p>
-                    <p className="text-2xl font-bold text-primary">{earnedPoints} puan kazandın!</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-6xl">💪</div>
-                  <div className="text-center space-y-2">
-                    <h2 className="text-3xl font-bold">Olsun!</h2>
-                    <p className="text-lg">{randomMessage}</p>
-                  </div>
-                </>
-              )}
-
-              <Button
-                onClick={handleCloseResultDialog}
-                className="w-full"
-                data-testid="button-result-ok"
-              >
-                Tamam
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-    </>
-  );
+  // Default return - only result dialog when idle
+  return resultDialogOpen ? <ResultDialog /> : null;
 }
