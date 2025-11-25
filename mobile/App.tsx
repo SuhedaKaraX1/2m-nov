@@ -1,7 +1,50 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <Text style={styles.header}>⚡ 2Mins Challenge</Text>
+          <Text style={styles.subtitle}>Mobil Uygulama</Text>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🎯 Hoş Geldiniz!</Text>
+            <Text style={styles.cardText}>
+              2 dakikalık görevlerle daha iyi alışkanlıklar oluşturun. Fiziksel sağlık, mental wellness, öğrenme, finans ve ilişkiler alanlarında başarı kazanın.
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📱 Mobil Özellikler</Text>
+            <Text style={styles.cardText}>
+              • Günlük challenge alarmları{'\n'}
+              • Gerçek zamanlı ilerleme takibi{'\n'}
+              • Başarı rozetleri ve puanlar{'\n'}
+              • Seri tutma sistemi{'\n'}
+              • Motive edici mesajlar
+            </Text>
+          </View>
+
+          <TouchableOpacity style={styles.button}>
+            <Text style={styles.buttonText}>Challenge Başlat</Text>
+          </TouchableOpacity>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>✨ Kurulum Tamamlandı</Text>
+            <Text style={styles.cardText}>
+              React Native + Expo ile mobil uygulama çalışıyor! 
+              Bu temel ekran, uygulamanın doğru kurulduğunu gösteriyor.
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -42,53 +85,16 @@ const styles = StyleSheet.create({
     color: '#d1d5db',
     lineHeight: 22,
   },
+  button: {
+    backgroundColor: '#3b82f6',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
-
-export default function App() {
-  return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      <SafeAreaView style={styles.container}>
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.header}>⚡ 2Mins Challenge</Text>
-          <Text style={styles.subtitle}>Mobile App - React Native</Text>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🎯 Hoş Geldiniz!</Text>
-            <Text style={styles.cardText}>
-              2 dakikalık görevlerle daha iyi alışkanlıklar oluşturun. Fiziksel sağlık, mental wellness, öğrenme, finans ve ilişkiler alanlarında başarı kazanın.
-            </Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>📱 Mobil Özellikler</Text>
-            <Text style={styles.cardText}>
-              • Günlük challenge alarmları{'\n'}
-              • Gerçek zamanlı ilerleme takibi{'\n'}
-              • Başarı rozetleri ve puanlar{'\n'}
-              • Seri tutma sistemi{'\n'}
-              • İstatistik ve analitik{'\n'}
-              • Motive edici mesajlar
-            </Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🚀 Başlamak İçin</Text>
-            <Text style={styles.cardText}>
-              1. Terminalde: npm run web{'\n'}
-              2. Tarayıcıda localhost:19006{'\n'}
-              3. Veya QR kodu Expo Go ile tarayın
-            </Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>✨ Web Modunda</Text>
-            <Text style={styles.cardText}>
-              Replit'te Expo uygulaması web modunda çalışmaktadır. Telefonunuzda test etmek için Expo Go uygulamasını kullanabilirsiniz.
-            </Text>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </SafeAreaProvider>
-  );
-}
