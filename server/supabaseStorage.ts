@@ -1083,14 +1083,13 @@ export class SupabaseStorage implements IStorage {
       throw new Error('CHALLENGE_NOT_FOUND');
     }
 
-    // Create history entry
+    // Create history entry (without status column - it doesn't exist in the table)
     const historyEntry = {
       user_id: userId,
       challenge_id: scheduleData.challenge_id,
       completed_at: new Date().toISOString(),
       time_spent: 120, // 2 minutes in seconds
       points_earned: status === 'success' ? scheduleData.challenges.points : 0,
-      status: status,
       postponed_count: 0, // TODO: track postponed count
       scheduled_time: scheduleData.scheduled_time,
     };

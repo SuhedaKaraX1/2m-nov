@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useChallengeScheduler } from '@/contexts/ChallengeSchedulerContext';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Clock, X, SkipForward, Check, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +8,13 @@ import confetti from 'canvas-confetti';
 
 type TimerPhase = 'initial' | 'running' | 'finished';
 type ResultStatus = 'success' | 'failed' | null;
+
+const ENCOURAGING_MESSAGES = [
+  'Olsun! Bir dahakine yaparsın 💪',
+  'Sorun değil! Her deneme bir ilerleme 🌟',
+  'Pes etme! Başarı yakın 🚀',
+  'Bir dahaki sefere odaklan! Sen yaparsın 💫',
+];
 
 export function ActiveChallengeModal() {
   const {
@@ -28,6 +35,7 @@ export function ActiveChallengeModal() {
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
   const [resultStatus, setResultStatus] = useState<ResultStatus>(null);
   const [earnedPoints, setEarnedPoints] = useState(0);
+  const [randomMessageIndex, setRandomMessageIndex] = useState(0);
 
   useEffect(() => {
     setIsOpen(notificationState !== 'idle');
@@ -126,6 +134,11 @@ export function ActiveChallengeModal() {
     // Close the challenge modal immediately
     setIsOpen(false);
 
+    // Set random message for failure case (stable, won't change on re-render)
+    if (status === 'failed') {
+      setRandomMessageIndex(Math.floor(Math.random() * ENCOURAGING_MESSAGES.length));
+    }
+
     // Show result dialog
     setResultStatus(status);
     setEarnedPoints(status === 'success' ? activeChallenge.challenge.points : 0);
@@ -139,11 +152,8 @@ export function ActiveChallengeModal() {
     try {
       await completeChallenge(timeSpent, status, false);
     } catch (error) {
-      toast({
-        title: 'Hata',
-        description: 'Challenge tamamlanamadı. Tekrar dene.',
-        variant: 'destructive',
-      });
+      console.error('Error completing challenge:', error);
+      // Don't show error toast here - the result dialog is already showing
     } finally {
       setIsCompletingChallenge(false);
     }
@@ -155,62 +165,61 @@ export function ActiveChallengeModal() {
     setEarnedPoints(0);
   };
 
-  // Result dialog - ALWAYS render this first (before early returns)
-  const encouragingMessages = [
-    'Olsun! Bir dahakine yaparsın 💪',
-    'Sorun değil! Her deneme bir ilerleme 🌟',
-    'Pes etme! Başarı yakın 🚀',
-    'Bir dahaki sefere odaklan! Sen yaparsın 💫',
-  ];
-  const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
-
-  const ResultDialog = () => (
-    <Dialog open={resultDialogOpen} onOpenChange={handleCloseResultDialog}>
-      <DialogContent className="max-w-md" data-testid="dialog-result">
-        <DialogTitle className="sr-only">
-          {resultStatus === 'success' ? 'Başarılı Tamamlama' : 'Tamamlama Sonucu'}
-        </DialogTitle>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute right-4 top-4"
-          onClick={handleCloseResultDialog}
-          data-testid="button-close-result"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-
-        <div className="flex flex-col items-center justify-center space-y-6 py-8">
-          {resultStatus === 'success' ? (
-            <>
-              <div className="text-6xl">🎉</div>
-              <div className="text-center space-y-2">
-                <h2 className="text-3xl font-bold text-green-500">Tebrikler!</h2>
-                <p className="text-lg">Challenge'ı başarıyla tamamladın!</p>
-                <p className="text-2xl font-bold text-primary">{earnedPoints} puan kazandın!</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-6xl">💪</div>
-              <div className="text-center space-y-2">
-                <h2 className="text-3xl font-bold">Olsun!</h2>
-                <p className="text-lg">{randomMessage}</p>
-              </div>
-            </>
-          )}
-
+  // Result dialog content - stable, no re-renders from random message
+  const renderResultDialog = () => {
+    if (!resultDialogOpen) return null;
+    
+    return (
+      <Dialog open={resultDialogOpen} onOpenChange={handleCloseResultDialog}>
+        <DialogContent className="max-w-md" data-testid="dialog-result">
+          <DialogTitle className="sr-only">
+            {resultStatus === 'success' ? 'Başarılı Tamamlama' : 'Tamamlama Sonucu'}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            Challenge tamamlandı
+          </DialogDescription>
           <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4"
             onClick={handleCloseResultDialog}
-            className="w-full"
-            data-testid="button-result-ok"
+            data-testid="button-close-result"
           >
-            Tamam
+            <X className="h-4 w-4" />
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+
+          <div className="flex flex-col items-center justify-center space-y-6 py-8">
+            {resultStatus === 'success' ? (
+              <>
+                <div className="text-6xl">🎉</div>
+                <div className="text-center space-y-2">
+                  <h2 className="text-3xl font-bold text-green-500">Tebrikler!</h2>
+                  <p className="text-lg">Challenge'ı başarıyla tamamladın!</p>
+                  <p className="text-2xl font-bold text-primary">{earnedPoints} puan kazandın!</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-6xl">💪</div>
+                <div className="text-center space-y-2">
+                  <h2 className="text-3xl font-bold">Olsun!</h2>
+                  <p className="text-lg">{ENCOURAGING_MESSAGES[randomMessageIndex]}</p>
+                </div>
+              </>
+            )}
+
+            <Button
+              onClick={handleCloseResultDialog}
+              className="w-full"
+              data-testid="button-result-ok"
+            >
+              Tamam
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
   // Countdown screen (5-4-3-2-1 before challenge starts)
   if (notificationState === 'countdown') {
@@ -218,9 +227,11 @@ export function ActiveChallengeModal() {
 
     return (
       <>
-        {resultDialogOpen && <ResultDialog />}
+        {renderResultDialog()}
         <Dialog open={isOpen} onOpenChange={() => {}}>
           <DialogContent className="max-w-md [&>button]:hidden" data-testid="dialog-countdown">
+            <DialogTitle className="sr-only">Geri Sayım</DialogTitle>
+            <DialogDescription className="sr-only">Challenge başlamak üzere</DialogDescription>
             <div className="flex flex-col items-center justify-center space-y-8 py-12">
               <div className="text-center space-y-4">
                 <h2 className="text-2xl font-bold">Challenge Yakında Başlıyor!</h2>
@@ -253,7 +264,7 @@ export function ActiveChallengeModal() {
 
     return (
       <>
-        {resultDialogOpen && <ResultDialog />}
+        {renderResultDialog()}
         <Dialog open={isOpen} onOpenChange={() => {}}>
           <DialogContent 
             className={`max-w-md [&>button]:hidden ${showFailureEffect ? 'animate-shake' : ''}`}
@@ -261,6 +272,7 @@ export function ActiveChallengeModal() {
           >
           <DialogHeader>
             <DialogTitle className="text-center text-2xl">{activeChallenge.challenge.title}</DialogTitle>
+            <DialogDescription className="sr-only">2 dakikalık challenge devam ediyor</DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col items-center justify-center space-y-6 py-6">
@@ -395,5 +407,5 @@ export function ActiveChallengeModal() {
   }
 
   // Default return - only result dialog when idle
-  return resultDialogOpen ? <ResultDialog /> : null;
+  return renderResultDialog();
 }
