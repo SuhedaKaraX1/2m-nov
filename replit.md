@@ -144,3 +144,28 @@ The application follows a sophisticated dark-first design approach based on Mate
 - **Interactive States**: Hover and active elevation states using custom CSS classes (`hover-elevate`, `active-elevate-2`)
 - **Component Borders**: Subtle borders with configurable outlines for buttons, badges, and cards
 - **Responsive Layout**: Mobile-first with max-width containers (max-w-2xl for content, max-w-6xl for dashboards)
+
+### Mobile Application (Expo)
+
+**Location**: `mobile/` directory
+
+**Stack**:
+- Expo SDK 54
+- React Native 0.81.5
+- React 19.1.0
+- TypeScript 5.9
+
+**Running the Mobile App**:
+1. Open a new terminal/shell
+2. Navigate to mobile directory: `cd mobile`
+3. Start Expo: `npx expo start`
+4. Scan QR code with Expo Go app on your phone
+
+**Note**: The mobile app is a separate React Native application that shares the same backend API. Web app runs on port 5000, Expo runs on port 8081.
+
+## Recent Changes (November 2025)
+
+- Added Expo React Native mobile application setup
+- Fixed terminal session issues with mobile directory
+- Installed @expo/ngrok globally for tunnel support
+- Created basic mobile App.tsx with 2Mins Challenge branding
