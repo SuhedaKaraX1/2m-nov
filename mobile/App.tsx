@@ -1,48 +1,45 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="light" />
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          <Text style={styles.header}>⚡ 2Mins Challenge</Text>
-          <Text style={styles.subtitle}>Mobil Uygulama</Text>
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.header}>⚡ 2Mins Challenge</Text>
+        <Text style={styles.subtitle}>Mobil Uygulama</Text>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🎯 Hoş Geldiniz!</Text>
-            <Text style={styles.cardText}>
-              2 dakikalık görevlerle daha iyi alışkanlıklar oluşturun. Fiziksel sağlık, mental wellness, öğrenme, finans ve ilişkiler alanlarında başarı kazanın.
-            </Text>
-          </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🎯 Hoş Geldiniz!</Text>
+          <Text style={styles.cardText}>
+            2 dakikalık görevlerle daha iyi alışkanlıklar oluşturun. Fiziksel sağlık, mental wellness, öğrenme, finans ve ilişkiler alanlarında başarı kazanın.
+          </Text>
+        </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>📱 Mobil Özellikler</Text>
-            <Text style={styles.cardText}>
-              • Günlük challenge alarmları{'\n'}
-              • Gerçek zamanlı ilerleme takibi{'\n'}
-              • Başarı rozetleri ve puanlar{'\n'}
-              • Seri tutma sistemi{'\n'}
-              • Motive edici mesajlar
-            </Text>
-          </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>📱 Mobil Özellikler</Text>
+          <Text style={styles.cardText}>
+            • Günlük challenge alarmları{'\n'}
+            • Gerçek zamanlı ilerleme takibi{'\n'}
+            • Başarı rozetleri ve puanlar{'\n'}
+            • Seri tutma sistemi{'\n'}
+            • Motive edici mesajlar
+          </Text>
+        </View>
 
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Challenge Başlat</Text>
-          </TouchableOpacity>
+        <TouchableOpacity style={styles.button}>
+          <Text style={styles.buttonText}>Challenge Başlat</Text>
+        </TouchableOpacity>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>✨ Kurulum Tamamlandı</Text>
-            <Text style={styles.cardText}>
-              React Native + Expo ile mobil uygulama çalışıyor! 
-              Bu temel ekran, uygulamanın doğru kurulduğunu gösteriyor.
-            </Text>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </SafeAreaProvider>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>✨ Kurulum Tamamlandı</Text>
+          <Text style={styles.cardText}>
+            React Native + Expo ile mobil uygulama çalışıyor! 
+            Bu temel ekran, uygulamanın doğru kurulduğunu gösteriyor.
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -50,6 +47,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0a0a0a',
+    paddingTop: 50,
   },
   content: {
     padding: 20,
