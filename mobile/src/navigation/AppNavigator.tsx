@@ -1,9 +1,8 @@
-import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { useAuth } from '../contexts/AuthContext';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import LoginScreen from '../screens/LoginScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
@@ -16,120 +15,180 @@ import SettingsScreen from '../screens/SettingsScreen';
 import FriendsScreen from '../screens/FriendsScreen';
 import MyChallengesScreen from '../screens/MyChallengesScreen';
 import CreateChallengeScreen from '../screens/CreateChallengeScreen';
+import JournalScreen from '../screens/JournalScreen';
 
 const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Drawer = createDrawerNavigator();
 
-function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Home: '🏠',
-    Challenges: '🎯',
-    Progress: '📊',
-    Profile: '👤',
-  };
+function HamburgerButton({ onPress }: { onPress: () => void }) {
   return (
-    <Text style={{ fontSize: focused ? 24 : 20, opacity: focused ? 1 : 0.6 }}>
-      {icons[name] || '📱'}
-    </Text>
+    <TouchableOpacity onPress={onPress} style={styles.hamburgerButton}>
+      <View style={styles.hamburgerLine} />
+      <View style={styles.hamburgerLine} />
+      <View style={styles.hamburgerLine} />
+    </TouchableOpacity>
   );
 }
 
-function HomeStack() {
+function CustomDrawerContent(props: any) {
+  const { navigation, state } = props;
+  const currentRoute = state.routes[state.index].name;
+
+  const navigationItems = [
+    { name: 'Home', label: 'Home', icon: '🏠' },
+    { name: 'MyChallenges', label: 'My Challenges', icon: '🎯' },
+    { name: 'Progress', label: 'Progress', icon: '📊' },
+    { name: 'Journal', label: 'Journal', icon: '📓' },
+    { name: 'Friends', label: 'Friends', icon: '👥' },
+    { name: 'Profile', label: 'Profile', icon: '👤' },
+    { name: 'Settings', label: 'Settings', icon: '⚙️' },
+  ];
+
+  const createItems = [
+    { name: 'NewChallenge', label: 'New Challenge', icon: '➕' },
+    { name: 'MyCustomChallenges', label: 'My Custom Challenges', icon: '✨' },
+  ];
+
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen
-        name="ChallengeDetail"
-        component={ChallengeDetailScreen}
-        options={{ headerShown: true, title: 'Challenge' }}
-      />
-    </Stack.Navigator>
+    <DrawerContentScrollView {...props} style={styles.drawerContent}>
+      <View style={styles.drawerHeader}>
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoIcon}>⚡</Text>
+        </View>
+        <Text style={styles.drawerTitle}>2Mins Challenge</Text>
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionLabel}>Navigation</Text>
+        {navigationItems.map((item) => (
+          <TouchableOpacity
+            key={item.name}
+            style={[
+              styles.drawerItem,
+              currentRoute === item.name && styles.drawerItemActive,
+            ]}
+            onPress={() => navigation.navigate(item.name)}
+          >
+            <Text style={styles.drawerItemIcon}>{item.icon}</Text>
+            <Text
+              style={[
+                styles.drawerItemLabel,
+                currentRoute === item.name && styles.drawerItemLabelActive,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionLabel}>Create</Text>
+        {createItems.map((item) => (
+          <TouchableOpacity
+            key={item.name}
+            style={[
+              styles.drawerItem,
+              currentRoute === item.name && styles.drawerItemActive,
+            ]}
+            onPress={() => navigation.navigate(item.name)}
+          >
+            <Text style={styles.drawerItemIcon}>{item.icon}</Text>
+            <Text
+              style={[
+                styles.drawerItemLabel,
+                currentRoute === item.name && styles.drawerItemLabelActive,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </DrawerContentScrollView>
   );
 }
 
-function ChallengesStack() {
+function MainDrawer() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="Challenges" component={ChallengesScreen} />
-      <Stack.Screen
-        name="ChallengeDetail"
-        component={ChallengeDetailScreen}
-        options={{ headerShown: true, title: 'Challenge' }}
-      />
-    </Stack.Navigator>
-  );
-}
-
-function ProfileStack() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ headerShown: true, title: 'Settings' }}
-      />
-      <Stack.Screen
-        name="Friends"
-        component={FriendsScreen}
-        options={{ headerShown: true, title: 'Friends' }}
-      />
-      <Stack.Screen
-        name="MyChallenges"
-        component={MyChallengesScreen}
-        options={{ headerShown: true, title: 'My Challenges' }}
-      />
-      <Stack.Screen
-        name="CreateChallenge"
-        component={CreateChallengeScreen}
-        options={{ headerShown: true, title: 'Create Challenge' }}
-      />
-    </Stack.Navigator>
-  );
-}
-
-function MainTabs() {
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#64748b',
-        tabBarStyle: {
+    <Drawer.Navigator
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
+      screenOptions={({ navigation }) => ({
+        headerStyle: {
           backgroundColor: '#fff',
-          borderTopColor: '#e2e8f0',
-          paddingTop: 8,
-          paddingBottom: 8,
-          height: 64,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: '#e2e8f0',
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
+        headerTitleStyle: {
+          color: '#1e293b',
+          fontWeight: '600',
+          fontSize: 18,
+        },
+        headerLeft: () => (
+          <HamburgerButton onPress={() => navigation.openDrawer()} />
+        ),
+        drawerStyle: {
+          backgroundColor: '#fff',
+          width: 280,
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeStack} options={{ title: 'Home' }} />
-      <Tab.Screen
-        name="ChallengesTab"
-        component={ChallengesStack}
-        options={{ title: 'Challenges' }}
+      <Drawer.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ title: '2Mins Challenge' }}
       />
-      <Tab.Screen name="ProgressTab" component={ProgressScreen} options={{ title: 'Progress' }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: 'Profile' }} />
-    </Tab.Navigator>
+      <Drawer.Screen
+        name="MyChallenges"
+        component={ChallengesScreen}
+        options={{ title: 'All Challenges' }}
+      />
+      <Drawer.Screen
+        name="Progress"
+        component={ProgressScreen}
+        options={{ title: 'Progress' }}
+      />
+      <Drawer.Screen
+        name="Journal"
+        component={JournalScreen}
+        options={{ title: 'Journal' }}
+      />
+      <Drawer.Screen
+        name="Friends"
+        component={FriendsScreen}
+        options={{ title: 'Friends' }}
+      />
+      <Drawer.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+      <Drawer.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: 'Settings' }}
+      />
+      <Drawer.Screen
+        name="NewChallenge"
+        component={CreateChallengeScreen}
+        options={{ title: 'New Challenge' }}
+      />
+      <Drawer.Screen
+        name="MyCustomChallenges"
+        component={MyChallengesScreen}
+        options={{ title: 'My Custom Challenges' }}
+      />
+      <Drawer.Screen
+        name="ChallengeDetail"
+        component={ChallengeDetailScreen}
+        options={{
+          title: 'Challenge',
+          drawerItemStyle: { display: 'none' },
+        }}
+      />
+    </Drawer.Navigator>
   );
 }
 
@@ -168,7 +227,7 @@ export default function AppNavigator() {
       ) : user?.onboardingCompleted === 0 ? (
         <OnboardingStack />
       ) : (
-        <MainTabs />
+        <MainDrawer />
       )}
     </NavigationContainer>
   );
@@ -185,5 +244,83 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: '#64748b',
+  },
+  hamburgerButton: {
+    marginLeft: 16,
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hamburgerLine: {
+    width: 22,
+    height: 2.5,
+    backgroundColor: '#1e293b',
+    marginVertical: 2,
+    borderRadius: 1,
+  },
+  drawerContent: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  drawerHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  logoIcon: {
+    fontSize: 20,
+  },
+  drawerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  sectionContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginLeft: 12,
+  },
+  drawerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginVertical: 2,
+  },
+  drawerItemActive: {
+    backgroundColor: '#eff6ff',
+  },
+  drawerItemIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  drawerItemLabel: {
+    fontSize: 15,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  drawerItemLabelActive: {
+    color: '#3b82f6',
+    fontWeight: '600',
   },
 });

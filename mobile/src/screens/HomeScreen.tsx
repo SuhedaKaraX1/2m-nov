@@ -49,10 +49,7 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   const handleCategoryPress = (category: ChallengeCategory) => {
-    navigation.navigate('ChallengesTab', {
-      screen: 'Challenges',
-      params: { category },
-    });
+    navigation.navigate('MyChallenges', { category });
   };
 
   if (loading) {

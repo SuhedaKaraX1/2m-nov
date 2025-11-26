@@ -9,3 +9,4 @@ export { default as SettingsScreen } from './SettingsScreen';
 export { default as FriendsScreen } from './FriendsScreen';
 export { default as MyChallengesScreen } from './MyChallengesScreen';
 export { default as CreateChallengeScreen } from './CreateChallengeScreen';
+export { default as JournalScreen } from './JournalScreen';

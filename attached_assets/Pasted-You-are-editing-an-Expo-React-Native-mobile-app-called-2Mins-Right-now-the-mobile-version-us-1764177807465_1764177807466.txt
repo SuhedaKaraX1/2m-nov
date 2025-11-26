@@ -1,0 +1,153 @@
+You are editing an Expo React Native mobile app called **2Mins**.  
+Right now the mobile version uses a **bottom tab bar** (Home / Challenges / Progress / Profile).  
+I want you to **remove the bottom tab bar completely** and replace it with a **hamburger menu + sidebar drawer**, just like the left sidebar on my web app.
+
+## Goal
+
+- Add a **hamburger icon** in the top-left of the app header on every main screen.
+- When the user taps the hamburger icon, open a **sidebar drawer menu**.
+- The drawer menu should contain **the same pages and structure as the web app sidebar**, and each page’s **content and functionality** should match the web version as closely as possible, but in a mobile-friendly layout.
+
+## Tech requirements
+
+- This is an Expo React Native app (TypeScript or JavaScript – keep whatever the project already uses).
+- Use **React Navigation** with a **Drawer navigator** (`@react-navigation/drawer`) instead of the current bottom tab navigator.
+- Keep all existing business logic, state, API calls, and styling tokens (colors, spacing, fonts) that the project already has.
+- Only change navigation and layout structure; do NOT break any existing features.
+
+## Navigation structure
+
+Replace the bottom tab bar with a drawer that has these items, in this order:
+
+**Navigation**
+1. Home  
+2. My Challenges  
+3. Progress  
+4. Journal  
+5. Friends  
+6. Profile  
+7. Settings  
+
+**Create**
+8. New Challenge  
+9. My Custom Challenges  
+
+Visually, it should resemble the web sidebar:
+
+- A vertical list on the left when opened.
+- The currently selected item is highlighted.
+- Sections “Navigation” and “Create” can be separated by a small gap or subtle label, similar to the web UI.
+
+## Screen mapping and content
+
+Use the existing mobile components where possible, but make each screen’s content **match the web app screenshots** I provided:
+
+### 1. Home
+- Show the **2Mins header** and summary stats at the top:
+  - Current streak (e.g., “1 day streak” on mobile, “Current Streak 1 days” on web)
+  - Total points (e.g., “60 Points”)
+  - Completed challenges (e.g., “2 Completed”)
+- Below that, show **Today’s / Featured Challenge** card:
+  - Title, category (e.g., “Relationships”), description, difficulty, points, and a “Start Challenge” button.
+- Below that, show **Explore Categories** cards (Physical, Mental, Learning, Finance, Relationships, Extreme, etc.) similar to the web: full-width or 2-columns grid, but responsive.
+- Make the whole screen scrollable with a `ScrollView`.
+
+### 2. My Challenges
+- Show a page like the web **All Challenges** screen:
+  - Page title: “All Challenges”.
+  - Category filter chips at the top: All, Physical, Mental, Learning, Finance, Relationships, Extreme.
+  - Under the filters, list challenge cards (e.g., “Desk Stretch Series”, “Two-Minute Walk”, etc.) with:
+    - Title
+    - Category
+    - Short description
+    - Points
+    - Duration
+    - Difficulty badge (Easy / Medium / Hard)
+    - “Start Challenge” button.
+- Make it scrollable vertically.
+
+### 3. Progress
+- Create a **Progress / Analytics** screen mirroring the web version:
+  - Top cards:
+    - Total Challenges (e.g., 6 completed)
+    - Last 30 Days (challenges completed)
+    - Categories explored.
+  - Tabs or segmented controls for **Daily / Trends / Categories** (can be simple buttons).
+  - Charts:
+    - Daily Activity (Last 30 Days) – bar chart of challenges per day.
+    - Points Earned (Last 30 Days) – line chart of points per day.
+  - Below the charts, show **Challenge History** list:
+    - Each item: challenge name, category, date, time spent, points, difficulty badge.
+- Implement charts using any lightweight React Native chart library already in the project; if none exists, add a simple one that works with Expo (e.g., `react-native-chart-kit`) and keep styles minimal.
+
+### 4. Journal
+- Recreate the web **Journal** layout in a mobile-friendly way:
+  - Title: “Journal”.
+  - On mobile, stack vertically instead of a wide 3-column layout.
+  - Top area showing entries list:
+    - If there are no entries, show a “No entries yet” placeholder text.
+  - Below or via a button “New Entry”, show inputs:
+    - Title
+    - Date picker (today’s date by default)
+    - Tags (comma-separated)
+    - Text area for the note content
+    - Optional media/file upload (image, video, audio, PDF).
+    - Optional voice recording button/section.
+  - Use scrollable view; adapt input sizes for small screens.
+
+### 5. Friends
+- Screen similar to the web **Friends** page:
+  - “Add Friend” card with an email input (`friend@example.com`) and “Send Request” button.
+  - “Your Friends” section with list of friends. If there are none, show “No friends yet – Add friends to see their activity and compete!”.
+  - “Friend Activity” card showing recent challenge activity by friends (or “No recent activity” when empty).
+
+### 6. Profile
+- Mirror the **Profile** screen on web:
+  - Section: “Personal Information” with avatar, name, email, username/handle.
+  - Section: “Your Stats” showing:
+    - Challenges
+    - Current Streak
+    - Longest Streak
+    - Total Points.
+  - Section: “Your Preferences”:
+    - Preferred Categories (e.g., physical, finance, extreme) as tags/chips.
+    - Challenge Days (e.g., Sat, Sun) as selectable badges.
+- All stacked vertically, scrollable.
+
+### 7. Settings
+- Screen like web **Settings** → “Challenge Scheduling”:
+  - Toggle “Enable scheduled notifications”.
+  - Time range pickers for **Active Time Slots** (e.g., 09:00 to 17:00, with “+ Add Time Slot” button).
+  - “Save Changes” button.
+- At the bottom, add a **Danger Zone** section:
+  - “Delete Account” button with appropriate warning text.
+
+### 8. New Challenge
+- Screen to create a new challenge, according to the existing logic in the project:
+  - Basic fields: title, category, difficulty, description, points, duration, etc.
+  - “Save” or “Create Challenge” button.
+- Reuse any existing forms/components related to challenge creation.
+
+### 9. My Custom Challenges
+- Show a list of user-created challenges:
+  - Title, category, difficulty, points.
+  - Edit / Delete actions if they exist in the current codebase.
+- Scrollable list.
+
+## UX & styling
+
+- Maintain the current **color palette**, typography, and button styles from the existing mobile app (blue primary buttons, white cards with rounded corners, etc.).
+- All screens must be **fully scrollable** and look good on common phone widths.
+- Do not leave the old bottom tab bar. After your changes, **navigation must be entirely via the hamburger + drawer**.
+- Ensure back navigation works correctly (e.g., using the default app header with a back button when navigating deep into sub-screens, if any).
+
+## Implementation details
+
+1. Install and configure `@react-navigation/drawer` if not already installed.
+2. Replace the bottom tab navigator in the root navigation file with a Drawer navigator.
+3. Add the hamburger icon to the header using `headerLeft` and connect it to `navigation.openDrawer()`.
+4. Register each screen (Home, MyChallenges, Progress, Journal, Friends, Profile, Settings, NewChallenge, MyCustomChallenges) as a separate route in the Drawer.
+5. Reuse as much existing screen/component code as possible; just refactor it into separate screen components if needed.
+6. Ensure the app builds and runs on Expo with no TypeScript/ESLint errors.
+
+Please update the codebase to implement this drawer-based navigation and page layouts exactly as described, keeping the page content consistent with the web UI but optimized for mobile.
