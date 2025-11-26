@@ -34,6 +34,7 @@
       "expo-secure-store"
     ],
     "extra": {
+      "apiUrl": "https://e1559e93-9c10-44fe-831a-bef55180957b-00-k0epj0w0va8p.kirk.replit.dev",
       "eas": {
         "projectId": "your-project-id"
       }

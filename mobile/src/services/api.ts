@@ -1,6 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || '';
+const getApiBaseUrl = () => {
+  const envUrl = Constants.expoConfig?.extra?.apiUrl;
+  if (envUrl) return envUrl;
+  
+  return 'https://e1559e93-9c10-44fe-831a-bef55180957b-00-k0epj0w0va8p.kirk.replit.dev';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+console.log('[API] Base URL:', API_BASE_URL);
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -30,6 +40,7 @@ class ApiService {
 
     const requestHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...headers,
     };
 
@@ -37,24 +48,34 @@ class ApiService {
       requestHeaders['Cookie'] = this.sessionCookie;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      method,
-      headers: requestHeaders,
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: 'include',
-    });
+    const url = `${API_BASE_URL}${endpoint}`;
+    console.log(`[API] ${method} ${url}`);
 
-    const setCookie = response.headers.get('set-cookie');
-    if (setCookie) {
-      await this.setSessionCookie(setCookie);
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: requestHeaders,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      const setCookie = response.headers.get('set-cookie');
+      if (setCookie) {
+        await this.setSessionCookie(setCookie);
+      }
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Request failed' }));
+        throw new Error(error.message || `Request failed with status ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      console.error(`[API Error] ${method} ${url}:`, error.message);
+      if (error.message === 'Network request failed') {
+        throw new Error('Unable to connect to server. Please check your internet connection.');
+      }
+      throw error;
     }
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || 'Request failed');
-    }
-
-    return response.json();
   }
 
   async login(emailOrUsername: string, password: string) {
