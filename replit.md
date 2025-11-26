@@ -193,11 +193,18 @@ mobile/
 **Navigation Structure**:
 - Auth Stack: Login/Register screens (unauthenticated users)
 - Onboarding Stack: Preference setup (new users)
-- Main Tab Navigator:
-  - Home Tab: Dashboard with featured challenge
-  - Challenges Tab: Browse and filter challenges
-  - Progress Tab: Stats, achievements, history
-  - Profile Tab: Settings, friends, custom challenges
+- Main Stack (wraps drawer for proper ChallengeDetail navigation):
+  - Drawer Navigator with hamburger menu:
+    - Home: Dashboard with stats and featured challenge
+    - All Challenges: Browse and filter challenges by category
+    - Progress: Stats, achievements, history
+    - Journal: Personal reflection and notes
+    - Friends: Friend management
+    - Profile: User info, preferences, and stats
+    - Settings: Notifications, scheduling, account
+    - New Challenge: Create custom challenges
+    - My Custom Challenges: View created challenges
+  - ChallengeDetail: Challenge with timer (pushed as stack screen)
 
 **Running the Mobile App**:
 1. Open a new terminal/shell
@@ -217,16 +224,24 @@ EXPO_PUBLIC_API_URL=your_api_url
 
 ## Recent Changes (November 2025)
 
+- **Drawer Navigation Implementation**: Replaced bottom tab navigation with hamburger menu + sidebar drawer
+  - Stack navigator wrapping drawer for proper ChallengeDetail navigation with back gestures
+  - Custom drawer content with emoji icons and section groupings (Navigation, Create)
+  - Enhanced screens: Profile with stats/preferences, Settings with scheduling options
+  - New JournalScreen for personal reflections
 - **Complete Mobile App Implementation**: Built feature-complete React Native mobile app
-- **Navigation System**: Implemented React Navigation with Auth Stack, Onboarding, and Main Tab Navigator
-- **All Screens Ported**: 11 screens matching web app functionality:
+- **Navigation System**: Implemented React Navigation with Auth Stack, Onboarding, and Drawer Navigator
+- **All Screens Ported**: 12 screens matching web app functionality:
   - Login/Register with email authentication
   - Onboarding with category and day preferences
   - Home dashboard with stats and featured challenge
   - Challenges listing with category filtering
   - Challenge detail with 2-minute countdown timer
   - Progress tracking with achievements
-  - Profile, Settings, Friends management
+  - Profile with stats and user preferences display
+  - Settings with scheduling and notifications
+  - Journal for personal notes
+  - Friends management
   - Custom challenge creation
 - **API Service**: Created unified API service for backend communication
 - **Auth Context**: Implemented authentication state management
