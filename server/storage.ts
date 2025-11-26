@@ -1687,11 +1687,6 @@ export async function seedDatabase() {
   }
 }
 
-import { SupabaseStorage } from "./supabaseStorage";
+console.log(`🗄️  Using Neon database`);
 
-const useSupabase = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-console.log(`🗄️  Using ${useSupabase ? 'Supabase' : 'Neon'} database`);
-
-export const storage = useSupabase
-  ? new SupabaseStorage()
-  : new DatabaseStorage();
+export const storage: IStorage = new DatabaseStorage();
