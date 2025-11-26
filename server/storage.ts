@@ -987,7 +987,7 @@ export class DatabaseStorage implements IStorage {
     return scheduled;
   }
 
-  async updateScheduledChallenge(id: string, userId: string, data: Partial<InsertScheduledChallenge>): Promise<ScheduledChallenge | null> {
+  async updateScheduledChallenge(id: string, userId: string, data: Partial<InsertScheduledChallenge>): Promise<ScheduledChallenge> {
     const [updated] = await db
       .update(scheduledChallenges)
       .set(data)
@@ -998,7 +998,10 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .returning();
-    return updated || null;
+    if (!updated) {
+      throw new Error("Scheduled challenge not found or unauthorized");
+    }
+    return updated;
   }
 
   async deleteScheduledChallenge(id: string, userId: string): Promise<boolean> {

@@ -357,7 +357,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { timeSpent } = bodySchema.parse(req.body);
 
         const historyEntry = await storage.addHistoryEntry(userId, {
-          userId,
           challengeId,
           completedAt: new Date().toISOString(),
           timeSpent,
