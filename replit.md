@@ -150,22 +150,85 @@ The application follows a sophisticated dark-first design approach based on Mate
 **Location**: `mobile/` directory
 
 **Stack**:
-- Expo SDK 54
-- React Native 0.81.5
-- React 19.1.0
-- TypeScript 5.9
+- Expo SDK 52
+- React Native 0.76.5
+- React 18.2.0
+- TypeScript 5.6
+- React Navigation 7.x
+- TanStack Query (React Query)
+- Supabase JS Client
+
+**Directory Structure**:
+```
+mobile/
+├── App.tsx                 # Main app entry with providers
+├── app.json                # Expo configuration
+├── tsconfig.json           # TypeScript configuration
+├── src/
+│   ├── contexts/
+│   │   └── AuthContext.tsx # Authentication state management
+│   ├── lib/
+│   │   └── supabase.ts     # Supabase client for mobile
+│   ├── navigation/
+│   │   ├── AppNavigator.tsx # Main navigation structure
+│   │   └── types.ts        # Navigation type definitions
+│   ├── screens/
+│   │   ├── LoginScreen.tsx          # Login/Register
+│   │   ├── OnboardingScreen.tsx     # User preferences setup
+│   │   ├── HomeScreen.tsx           # Dashboard with stats
+│   │   ├── ChallengesScreen.tsx     # Challenge listing
+│   │   ├── ChallengeDetailScreen.tsx # Challenge with timer
+│   │   ├── ProgressScreen.tsx       # Stats & achievements
+│   │   ├── ProfileScreen.tsx        # User profile
+│   │   ├── SettingsScreen.tsx       # App settings
+│   │   ├── FriendsScreen.tsx        # Friend management
+│   │   ├── MyChallengesScreen.tsx   # Custom challenges
+│   │   └── CreateChallengeScreen.tsx # Create new challenge
+│   ├── services/
+│   │   └── api.ts          # API service for backend calls
+│   └── types/
+│       └── index.ts        # Shared type definitions
+```
+
+**Navigation Structure**:
+- Auth Stack: Login/Register screens (unauthenticated users)
+- Onboarding Stack: Preference setup (new users)
+- Main Tab Navigator:
+  - Home Tab: Dashboard with featured challenge
+  - Challenges Tab: Browse and filter challenges
+  - Progress Tab: Stats, achievements, history
+  - Profile Tab: Settings, friends, custom challenges
 
 **Running the Mobile App**:
 1. Open a new terminal/shell
 2. Navigate to mobile directory: `cd mobile`
-3. Start Expo: `npx expo start`
-4. Scan QR code with Expo Go app on your phone
+3. Install dependencies: `npm install`
+4. Start Expo: `npx expo start`
+5. Scan QR code with Expo Go app on your phone
+
+**Environment Variables** (mobile/.env):
+```
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+EXPO_PUBLIC_API_URL=your_api_url
+```
 
 **Note**: The mobile app is a separate React Native application that shares the same backend API. Web app runs on port 5000, Expo runs on port 8081.
 
 ## Recent Changes (November 2025)
 
-- Added Expo React Native mobile application setup
-- Fixed terminal session issues with mobile directory
-- Installed @expo/ngrok globally for tunnel support
-- Created basic mobile App.tsx with 2Mins Challenge branding
+- **Complete Mobile App Implementation**: Built feature-complete React Native mobile app
+- **Navigation System**: Implemented React Navigation with Auth Stack, Onboarding, and Main Tab Navigator
+- **All Screens Ported**: 11 screens matching web app functionality:
+  - Login/Register with email authentication
+  - Onboarding with category and day preferences
+  - Home dashboard with stats and featured challenge
+  - Challenges listing with category filtering
+  - Challenge detail with 2-minute countdown timer
+  - Progress tracking with achievements
+  - Profile, Settings, Friends management
+  - Custom challenge creation
+- **API Service**: Created unified API service for backend communication
+- **Auth Context**: Implemented authentication state management
+- **Supabase Integration**: Added mobile Supabase client with AsyncStorage
+- **Type Safety**: Shared types between mobile and web apps
