@@ -1,0 +1,84 @@
+You are an AI pair programmer inside a Replit monorepo.
+
+This project currently has:
+- A fully working **web application** (React/Next or similar) in the root of the repo.
+- A separate **mobile application** in the `mobile/` folder, built with React Native and Expo.
+- A Supabase backend that is already integrated and working in the web app.
+
+Goal:
+Create a **feature-complete mobile version** of the existing web app, using the code in this repo as the single source of truth. The mobile app must have the **same pages, flows, and core features** as the web app (authentication, database operations, navigation, etc.), adapted to mobile UX.
+
+### High-level tasks
+
+1. **Understand the existing web app**
+   - Scan the codebase outside of `/mobile` and identify:
+     - Routing structure (pages, routes, layouts).
+     - Main features and flows (login, register, logout, profile, listing/detail pages, dashboards, forms, etc.).
+     - How Supabase is initialized and used (client creation, auth, database queries).
+     - Shared UI components, hooks, services, and utilities that can be reused.
+   - Make sure you understand where the “source of truth” logic lives (for example: `src/`, `pages/`, `components/`, `lib/`, `services/`).
+
+2. **Design the mobile architecture**
+   - Treat `/mobile` as a React Native + Expo app.
+   - Set up navigation with React Navigation (stack/tab navigation) that mirrors the web app’s page structure:
+     - Each main web page should correspond to a screen in the mobile app.
+     - Preserve the same URL/route semantics conceptually but adapt them to mobile navigation.
+   - Reuse as much business logic as possible from the web app:
+     - Shared hooks (e.g. useAuth, useSupabase, useApi, etc.).
+     - Shared service modules for API and Supabase queries.
+     - Shared validation logic, schemas, and types.
+
+3. **Implement Supabase integration in the mobile app**
+   - In `/mobile`, create or update a Supabase client that:
+     - Uses the same Supabase project (URL and keys provided through environment variables).
+     - Uses the same auth mechanisms (email/password, magic link, OAuth, etc.), matching what the web app does.
+   - Make sure **no secrets are hard-coded**; read them from environment variables configured in Replit/Expo.
+   - Ensure that login, logout, session handling and protected routes/screens work the same way as on the web.
+
+4. **Port each major feature from web to mobile**
+   For each major feature in the web app (for example):
+   - Authentication (sign up, login, logout, forgot password).
+   - Profile / account pages.
+   - Listing pages (e.g. list of items, posts, records).
+   - Detail pages (e.g. item detail, post detail).
+   - Forms and actions (create / update / delete).
+   - Any dashboards, analytics views or specific workflows that exist on the web.
+   
+   Do the following:
+   - Create a corresponding React Native screen component in `/mobile` that:
+     - Calls the **same underlying logic** (hooks/services) as the web version, or a refactored shared version.
+     - Preserves the same data flow and business rules.
+     - Adapts the UI to mobile (ScrollView, safe areas, touchable components, etc.).
+   - If web-specific UI components cannot be used directly (e.g. HTML elements, web-only libraries), extract and reuse only the **logic**, and replace the UI with native equivalents.
+
+5. **Refactor for shared code where needed**
+   - If logic is duplicated between web and mobile, extract that logic into a shared module (for example, a `shared/` or `src/shared/` folder) and import it from both web and mobile.
+   - Do **not** break the working web app while refactoring. Changes must be backwards compatible.
+   - Make sure TypeScript types/interfaces (if used) are shared and consistent.
+
+6. **Maintain consistent behavior and UX**
+   - The mobile app should behave the same way as the web app:
+     - Same validations and error messages.
+     - Same permissions/authorization checks.
+     - Same data displayed (from Supabase).
+   - UI does not have to be pixel-perfect identical, but the **flows and functionalities must be equivalent**.
+
+7. **Testing and cleanup**
+   - After implementing each major screen/feature, verify that:
+     - The mobile app builds and runs with Expo.
+     - Navigation works without errors.
+     - Supabase operations (login, fetch, insert, update, delete) work correctly.
+   - Remove unused placeholder code in `/mobile` that is no longer needed.
+
+### What to do now
+
+1. Start by scanning the repo and summarizing:
+   - The main routes/pages of the web app.
+   - The main features and flows.
+2. Propose a navigation structure for the mobile app based on the web routes.
+3. Then, step by step, implement the mobile screens and logic, starting with:
+   - Supabase setup in `/mobile`.
+   - Auth screens (login/register).
+   - The most important core user flow.
+
+Make all changes directly in the code under `/mobile` (and, if needed, shared folders), while ensuring that the existing web application continues to work as before.

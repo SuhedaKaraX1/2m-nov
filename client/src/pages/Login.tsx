@@ -1,10 +1,15 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { Zap } from "lucide-react";
 
 export default function Login() {
@@ -27,42 +32,72 @@ export default function Login() {
 
     try {
       if (isLogin) {
-        const response = await apiRequest("POST", "/api/auth/local/login", {
-          emailOrUsername: formData.emailOrUsername,
-          password: formData.password,
+        // LOGIN
+        const response = await fetch("/api/auth/local/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include", // cookie'yi tarayıcıya yazdırmak için kritik
+          body: JSON.stringify({
+            emailOrUsername: formData.emailOrUsername,
+            password: formData.password,
+          }),
         });
 
+        const data = await response.json().catch(() => ({}));
+
         if (response.ok) {
+          toast({
+            title: "Login successful",
+            description: "You are being redirected to the app.",
+          });
+
+          // Giriş sonrası ana sayfaya yönlendir
           window.location.href = "/";
         } else {
-          const error = await response.json();
           toast({
             title: "Login failed",
-            description: error.message || "Invalid credentials",
+            description: data.message || "Invalid credentials",
             variant: "destructive",
           });
         }
       } else {
-        const response = await apiRequest("POST", "/api/auth/register", {
-          email: formData.email,
-          username: formData.username,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
+        // REGISTER
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include", // kayıt sonrası session cookie için
+          body: JSON.stringify({
+            email: formData.email,
+            username: formData.username,
+            password: formData.password,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+          }),
         });
 
+        const data = await response.json().catch(() => ({}));
+
         if (response.ok) {
+          toast({
+            title: "Account created",
+            description: "You are being redirected to the app.",
+          });
+
           window.location.href = "/";
         } else {
-          const error = await response.json();
           toast({
             title: "Registration failed",
-            description: error.message || "Could not create account",
+            description: data.message || "Could not create account",
             variant: "destructive",
           });
         }
       }
     } catch (error) {
+      console.error(error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -112,7 +147,10 @@ export default function Login() {
                       placeholder="Enter your email or username"
                       value={formData.emailOrUsername}
                       onChange={(e) =>
-                        setFormData({ ...formData, emailOrUsername: e.target.value })
+                        setFormData({
+                          ...formData,
+                          emailOrUsername: e.target.value,
+                        })
                       }
                       required
                     />
@@ -144,7 +182,10 @@ export default function Login() {
                         placeholder="John"
                         value={formData.firstName}
                         onChange={(e) =>
-                          setFormData({ ...formData, firstName: e.target.value })
+                          setFormData({
+                            ...formData,
+                            firstName: e.target.value,
+                          })
                         }
                       />
                     </div>
@@ -157,7 +198,10 @@ export default function Login() {
                         placeholder="Doe"
                         value={formData.lastName}
                         onChange={(e) =>
-                          setFormData({ ...formData, lastName: e.target.value })
+                          setFormData({
+                            ...formData,
+                            lastName: e.target.value,
+                          })
                         }
                       />
                     </div>
@@ -216,8 +260,8 @@ export default function Login() {
                 {loading
                   ? "Please wait..."
                   : isLogin
-                  ? "Sign In"
-                  : "Create Account"}
+                    ? "Sign In"
+                    : "Create Account"}
               </Button>
             </form>
 
@@ -242,7 +286,6 @@ export default function Login() {
                 <span className="bg-card px-2 text-muted-foreground">Or</span>
               </div>
             </div>
-
           </CardContent>
         </Card>
       </div>
