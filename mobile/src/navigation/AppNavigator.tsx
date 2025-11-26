@@ -1,6 +1,6 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
+import { createDrawerNavigator, DrawerContentScrollView } from '@react-navigation/drawer';
 import { useAuth } from '../contexts/AuthContext';
 import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
@@ -32,11 +32,11 @@ function HamburgerButton({ onPress }: { onPress: () => void }) {
 
 function CustomDrawerContent(props: any) {
   const { navigation, state } = props;
-  const currentRoute = state.routes[state.index].name;
+  const currentRoute = state?.routes?.[state.index]?.name || 'Home';
 
   const navigationItems = [
     { name: 'Home', label: 'Home', icon: '🏠' },
-    { name: 'MyChallenges', label: 'My Challenges', icon: '🎯' },
+    { name: 'AllChallenges', label: 'All Challenges', icon: '🎯' },
     { name: 'Progress', label: 'Progress', icon: '📊' },
     { name: 'Journal', label: 'Journal', icon: '📓' },
     { name: 'Friends', label: 'Friends', icon: '👥' },
@@ -109,7 +109,7 @@ function CustomDrawerContent(props: any) {
   );
 }
 
-function MainDrawer() {
+function DrawerScreens() {
   return (
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}
@@ -141,7 +141,7 @@ function MainDrawer() {
         options={{ title: '2Mins Challenge' }}
       />
       <Drawer.Screen
-        name="MyChallenges"
+        name="AllChallenges"
         component={ChallengesScreen}
         options={{ title: 'All Challenges' }}
       />
@@ -180,15 +180,34 @@ function MainDrawer() {
         component={MyChallengesScreen}
         options={{ title: 'My Custom Challenges' }}
       />
-      <Drawer.Screen
+    </Drawer.Navigator>
+  );
+}
+
+function MainStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="DrawerScreens"
+        component={DrawerScreens}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
         name="ChallengeDetail"
         component={ChallengeDetailScreen}
         options={{
           title: 'Challenge',
-          drawerItemStyle: { display: 'none' },
+          headerStyle: {
+            backgroundColor: '#fff',
+          },
+          headerTitleStyle: {
+            color: '#1e293b',
+            fontWeight: '600',
+          },
+          headerBackTitle: 'Back',
         }}
       />
-    </Drawer.Navigator>
+    </Stack.Navigator>
   );
 }
 
@@ -227,7 +246,7 @@ export default function AppNavigator() {
       ) : user?.onboardingCompleted === 0 ? (
         <OnboardingStack />
       ) : (
-        <MainDrawer />
+        <MainStack />
       )}
     </NavigationContainer>
   );
