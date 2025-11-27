@@ -100,6 +100,7 @@ export default function SettingsScreen({ navigation }: any) {
         }
       } catch (error) {
         console.log("Failed to load settings:", error);
+        Alert.alert("Error", "Failed to load settings. Some data may be stale.");
       } finally {
         setLoading(false);
       }
@@ -160,7 +161,7 @@ export default function SettingsScreen({ navigation }: any) {
     weeklySummary: form.weeklySummary,
     profileVisibility: form.profileVisibility,
     dataSharing: form.dataSharing,
-    enableNotifications: form.enableScheduledNotifications,
+    enableNotifications: form.enableScheduledNotifications ? 1 : 0,
     challengeScheduleTimes: form.challengeScheduleTimes.map((slot) => ({
       id: slot.id,
       start: slot.start,
