@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,10 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
+  Image,
+} from "react-native";
+import { useAuth } from "../contexts/AuthContext";
+import { apiService } from "../services/api";
 
 export default function ProfileScreen({ navigation }: any) {
   const { user, logout } = useAuth();
@@ -25,23 +26,23 @@ export default function ProfileScreen({ navigation }: any) {
       const data = await apiService.getProgress();
       setProgress(data);
     } catch (error) {
-      console.error('Failed to load progress:', error);
+      console.error("Failed to load progress:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Logout',
-        style: 'destructive',
+        text: "Logout",
+        style: "destructive",
         onPress: async () => {
           try {
             await logout();
           } catch (error) {
-            console.error('Logout failed:', error);
+            console.error("Logout failed:", error);
           }
         },
       },
@@ -50,27 +51,27 @@ export default function ProfileScreen({ navigation }: any) {
 
   const preferredCategories = user?.preferredCategories || [];
   const preferredDays = user?.preferredDays || [];
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Profile Header */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Personal Information</Text>
+        <Text style={styles.sectionTitle}>PERSONAL INFORMATION</Text>
         <View style={styles.card}>
           <View style={styles.profileRow}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {user?.firstName?.[0] || user?.username?.[0] || '?'}
+                {user?.firstName?.[0] || user?.username?.[0] || "?"}
               </Text>
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.userName}>
                 {user?.firstName
-                  ? `${user.firstName} ${user.lastName || ''}`
-                  : user?.username || 'User'}
+                  ? `${user.firstName} ${user.lastName || ""}`
+                  : user?.username || "User"}
               </Text>
-              <Text style={styles.userEmail}>{user?.email || ''}</Text>
+              <Text style={styles.userEmail}>{user?.email || ""}</Text>
               {user?.username && (
                 <Text style={styles.userHandle}>@{user.username}</Text>
               )}
@@ -83,31 +84,50 @@ export default function ProfileScreen({ navigation }: any) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Your Stats</Text>
         <View style={styles.statsGrid}>
+          {/* 🎯 Challenges */}
           <View style={styles.statCard}>
-            <Text style={styles.statIcon}>🎯</Text>
+            <Image
+              source={require("../../assets/bullseye.png")}
+              style={styles.statIconImage}
+            />
             <Text style={styles.statValue}>
-              {loading ? '-' : progress?.totalChallengesCompleted || 0}
+              {loading ? "-" : progress?.totalChallengesCompleted || 0}
             </Text>
             <Text style={styles.statLabel}>Challenges</Text>
           </View>
+
+          {/* 🔥 Current Streak */}
           <View style={styles.statCard}>
-            <Text style={styles.statIcon}>🔥</Text>
+            <Image
+              source={require("../../assets/fire.png")}
+              style={styles.statIconImage}
+            />
             <Text style={styles.statValue}>
-              {loading ? '-' : progress?.currentStreak || 0}
+              {loading ? "-" : progress?.currentStreak || 0}
             </Text>
             <Text style={styles.statLabel}>Current Streak</Text>
           </View>
+
+          {/* 🏆 Longest Streak */}
           <View style={styles.statCard}>
-            <Text style={styles.statIcon}>🏆</Text>
+            <Image
+              source={require("../../assets/trophy.png")}
+              style={styles.statIconImage}
+            />
             <Text style={styles.statValue}>
-              {loading ? '-' : progress?.longestStreak || 0}
+              {loading ? "-" : progress?.longestStreak || 0}
             </Text>
             <Text style={styles.statLabel}>Longest Streak</Text>
           </View>
+
+          {/* ⭐ Total Points */}
           <View style={styles.statCard}>
-            <Text style={styles.statIcon}>⭐</Text>
+            <Image
+              source={require("../../assets/star.png")}
+              style={styles.statIconImage}
+            />
             <Text style={styles.statValue}>
-              {loading ? '-' : progress?.totalPoints || 0}
+              {loading ? "-" : progress?.totalPoints || 0}
             </Text>
             <Text style={styles.statLabel}>Total Points</Text>
           </View>
@@ -174,7 +194,7 @@ export default function ProfileScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
   },
   content: {
     padding: 16,
@@ -184,145 +204,150 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    color: "#64748b",
+    textTransform: "uppercase",
     marginBottom: 12,
     letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
   profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#3b82f6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#3b82f6",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   avatarText: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    textTransform: 'uppercase',
+    fontWeight: "bold",
+    color: "#fff",
+    textTransform: "uppercase",
   },
   profileInfo: {
     flex: 1,
   },
   userName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontWeight: "bold",
+    color: "#1e293b",
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#64748b",
   },
   userHandle: {
     fontSize: 14,
-    color: '#3b82f6',
+    color: "#3b82f6",
     marginTop: 2,
   },
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   statCard: {
-    width: '47%',
-    backgroundColor: '#fff',
+    width: "47%",
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  statIcon: {
-    fontSize: 24,
+
+  // Yeni ikon stil
+  statIconImage: {
+    width: 32,
+    height: 32,
     marginBottom: 8,
+    resizeMode: "contain",
   },
+
   statValue: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontWeight: "bold",
+    color: "#1e293b",
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: "#64748b",
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   preferenceLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
+    fontWeight: "500",
+    color: "#374151",
     marginBottom: 8,
   },
   tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   tag: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: "#eff6ff",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   tagText: {
     fontSize: 14,
-    color: '#3b82f6',
-    fontWeight: '500',
-    textTransform: 'capitalize',
+    color: "#3b82f6",
+    fontWeight: "500",
+    textTransform: "capitalize",
   },
   noPreference: {
     fontSize: 14,
-    color: '#94a3b8',
-    fontStyle: 'italic',
+    color: "#94a3b8",
+    fontStyle: "italic",
   },
   daysContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   dayBadge: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: "#f1f5f9",
   },
   dayBadgeActive: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: "#3b82f6",
   },
   dayText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#64748b',
+    fontWeight: "500",
+    color: "#64748b",
   },
   dayTextActive: {
-    color: '#fff',
+    color: "#fff",
   },
   logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fef2f2',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fef2f2",
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
@@ -333,20 +358,20 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#ef4444',
+    fontWeight: "600",
+    color: "#ef4444",
   },
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 20,
   },
   footerText: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#64748b",
     marginBottom: 4,
   },
   versionText: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: "#94a3b8",
   },
 });

@@ -59,6 +59,9 @@ export default function JournalScreen() {
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
 
+  // ARAMA (başlık, metin, etiket, dosya adı)
+  const [searchQuery, setSearchQuery] = useState("");
+
   useEffect(() => {
     return () => {
       if (sound) {
@@ -235,20 +238,54 @@ export default function JournalScreen() {
     }
   };
 
-  // ---------- LİSTE FİLTRESİ ----------
+  // TÜM ETİKETLER (Etiketler butonu için)
+  const allTags = Array.from(
+    new Set(
+      entries.flatMap((e) => e.tags.map((t) => t.trim()).filter(Boolean)),
+    ),
+  );
+  const tagCount = allTags.length;
+
+  const handleShowTags = () => {
+    if (tagCount === 0) {
+      Alert.alert("Tags", "No tags yet.");
+      return;
+    }
+    Alert.alert("Tags", allTags.join(", "));
+  };
+
+  // ---------- LİSTE FİLTRESİ + ARAMA ----------
   const getFilteredEntries = () => {
+    let list = entries;
+
     switch (selectedFilter) {
       case "text":
-        return entries.filter((e) => e.mediaType === "text");
+        list = list.filter((e) => e.mediaType === "text");
+        break;
       case "audio":
-        return entries.filter(
+        list = list.filter(
           (e) => e.mediaType === "audio" || e.mediaKind === "audio",
         );
+        break;
       case "media":
-        return entries.filter((e) => e.mediaType === "file");
+        list = list.filter((e) => e.mediaType === "file");
+        break;
       default:
-        return entries;
+        break;
     }
+
+    if (searchQuery.trim().length === 0) {
+      return list;
+    }
+
+    const q = searchQuery.toLowerCase();
+    return list.filter((e) => {
+      const inTitle = e.title.toLowerCase().includes(q);
+      const inContent = (e.content || "").toLowerCase().includes(q);
+      const inTags = e.tags.join(" ").toLowerCase().includes(q);
+      const inFileName = (e.fileName || "").toLowerCase().includes(q);
+      return inTitle || inContent || inTags || inFileName;
+    });
   };
 
   const filteredEntries = getFilteredEntries();
@@ -266,7 +303,6 @@ export default function JournalScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <Text style={styles.title}>Journal</Text>
           <Text style={styles.subtitle}>
             Write text, record audio or add media. All in one place.
           </Text>
@@ -437,7 +473,7 @@ export default function JournalScreen() {
           </View>
         )}
 
-        {/* ENTRIES BAŞLIĞI & FİLTRE MENÜSÜ */}
+        {/* ENTRIES BAŞLIĞI */}
         <View style={styles.entriesSection}>
           <View style={styles.entriesHeader}>
             <View>
@@ -448,6 +484,30 @@ export default function JournalScreen() {
             </View>
           </View>
 
+          {/* ARAMA + ETİKETLER (webdeki gibi satır) */}
+          <View style={styles.searchRow}>
+            <View style={styles.searchBox}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search (title, text, tags, file name)"
+                placeholderTextColor="#9ca3af"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.tagsButton}
+              onPress={handleShowTags}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.tagsButtonText}>Tags</Text>
+              <Text style={styles.tagsButtonCount}>{tagCount}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* TÜR FİLTRESİ */}
           <View style={styles.filterSection}>
             <Text style={styles.filterLabel}>Filter by type</Text>
             <View style={styles.filterChipsRow}>
@@ -747,7 +807,52 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: "600", color: "#111827" },
   entriesCount: { fontSize: 12, color: "#6b7280", marginTop: 2 },
 
-  filterSection: { marginBottom: 16, marginTop: 8 },
+  /* Search + Tags row */
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    marginRight: 8,
+  },
+  searchIcon: { fontSize: 16, color: "#9ca3af", marginRight: 6 },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    paddingVertical: 8,
+    color: "#111827",
+  },
+  tagsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e5e7eb",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  tagsButtonText: {
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "500",
+    marginRight: 4,
+  },
+  tagsButtonCount: {
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "600",
+  },
+
+  filterSection: { marginBottom: 16, marginTop: 4 },
   filterLabel: { fontSize: 12, color: "#6b7280", marginBottom: 8 },
   filterChipsRow: {
     flexDirection: "row",

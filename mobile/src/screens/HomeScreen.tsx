@@ -93,17 +93,17 @@ export default function HomeScreen({ navigation }: any) {
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "physical":
-        return "#fce7f3";
+        return "#bfdbfe";
       case "mental":
         return "#f3e8ff";
       case "learning":
-        return "#dcfce7";
-      case "finance":
         return "#fef3c7";
+      case "finance":
+        return "#dcfce7";
       case "relationships":
-        return "#bfdbfe";
+        return "#fce7f3";
       case "extreme":
-        return "#fbcfe8";
+        return "#ffbf8b";
       default:
         return "#f0f4f8";
     }

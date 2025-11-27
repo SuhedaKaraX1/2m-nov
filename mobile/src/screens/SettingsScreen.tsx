@@ -13,12 +13,23 @@ import {
   Animated,
   Vibration,
   Dimensions,
+  useColorScheme,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 import { apiService } from "../services/api";
 import * as ImagePicker from "expo-image-picker";
 import ConfettiCannon from "react-native-confetti-cannon";
 import Svg, { Circle } from "react-native-svg";
+
+// ICONS
+import profileIcon from "../../assets/profile.png";
+import preferencesIcon from "../../assets/preferences.png";
+import notificationsIcon from "../../assets/notifications.png";
+import privacyIcon from "../../assets/privacy.png";
+import alarmIcon from "../../assets/alarm.png";
+import dangerIcon from "../../assets/danger.png";
+import cameraIcon from "../../assets/camera.png";
+import trashIcon from "../../assets/bin.png";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -83,6 +94,42 @@ export default function SettingsScreen({ navigation }: any) {
     email: user?.email || "",
   });
 
+  // THEME
+  const deviceColorScheme = useColorScheme();
+  const effectiveTheme =
+    form.theme === "system" ? deviceColorScheme || "light" : form.theme;
+  const isDarkMode = effectiveTheme === "dark";
+
+  const themed = {
+    container: {
+      backgroundColor: isDarkMode ? "#020617" : "#f8fafc",
+    },
+    card: {
+      backgroundColor: isDarkMode ? "#0f172a" : "#ffffff",
+      borderColor: isDarkMode ? "#1f2937" : "#ffffff",
+    },
+    primaryText: {
+      color: isDarkMode ? "#e5e7eb" : "#1e293b",
+    },
+    secondaryText: {
+      color: isDarkMode ? "#9ca3af" : "#64748b",
+    },
+    input: {
+      backgroundColor: isDarkMode ? "#020617" : "#f8fafc",
+      borderColor: isDarkMode ? "#1f2937" : "#e2e8f0",
+      color: isDarkMode ? "#e5e7eb" : "#1e293b",
+    },
+    cardShadow: isDarkMode
+      ? {}
+      : {
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          elevation: 2,
+        },
+  };
+
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -102,29 +149,30 @@ export default function SettingsScreen({ navigation }: any) {
             weeklySummary: settings.weeklySummary ?? true,
             profileVisibility: settings.profileVisibility || "friends",
             dataSharing: settings.dataSharing ?? false,
-            enableScheduledNotifications: settings.enableNotifications === 1 || settings.enableNotifications === true,
-            challengeScheduleTimes: (settings.challengeScheduleTimes || []).map((slot: any) => ({
-              id: slot.id || Date.now().toString(),
-              start: slot.start || "09:00",
-              end: slot.end || "17:00",
-            })),
+            enableScheduledNotifications:
+              settings.enableNotifications === 1 ||
+              settings.enableNotifications === true,
+            challengeScheduleTimes: (settings.challengeScheduleTimes || []).map(
+              (slot: any) => ({
+                id: slot.id || Date.now().toString(),
+                start: slot.start || "09:00",
+                end: slot.end || "17:00",
+              }),
+            ),
           }));
         }
       } catch (error) {
         console.log("Failed to load settings:", error);
-        Alert.alert("Error", "Failed to load settings. Some data may be stale.");
+        Alert.alert(
+          "Error",
+          "Failed to load settings. Some data may be stale.",
+        );
       } finally {
         setLoading(false);
       }
     };
     loadSettings();
   }, []);
-
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [savingPreferences, setSavingPreferences] = useState(false);
-  const [savingNotifications, setSavingNotifications] = useState(false);
-  const [savingPrivacy, setSavingPrivacy] = useState(false);
-  const [savingSchedule, setSavingSchedule] = useState(false);
 
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -139,7 +187,9 @@ export default function SettingsScreen({ navigation }: any) {
 
   const [timerPhase, setTimerPhase] = useState<TimerPhase>("initial");
   const [timeRemaining, setTimeRemaining] = useState(120);
-  const [challengeStartTime, setChallengeStartTime] = useState<Date | null>(null);
+  const [challengeStartTime, setChallengeStartTime] = useState<Date | null>(
+    null,
+  );
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultStatus, setResultStatus] = useState<ResultStatus>(null);
   const [earnedPoints, setEarnedPoints] = useState(0);
@@ -147,6 +197,10 @@ export default function SettingsScreen({ navigation }: any) {
   const [showConfetti, setShowConfetti] = useState(false);
   const confettiRef = useRef<any>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // single global save state
+  const [savingAll, setSavingAll] = useState(false);
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   const getInitials = () => {
     const first = form.firstName?.[0] || "";
@@ -192,54 +246,33 @@ export default function SettingsScreen({ navigation }: any) {
     })),
   });
 
-  const handleSaveProfile = async () => {
-    setSavingProfile(true);
+  // GLOBAL SAVE HANDLER
+  const handleSaveAll = async () => {
+    setSavingAll(true);
     try {
       await apiService.saveSettings(getFullFormData());
-      showSuccessAlert("Profile");
+
+      await apiService.saveScheduleSettings({
+        enableNotifications: form.enableScheduledNotifications ? 1 : 0,
+        challengeScheduleTimes: form.challengeScheduleTimes.map((slot) => ({
+          id: slot.id,
+          start: slot.start,
+          end: slot.end,
+        })),
+      });
+
+      showSuccessAlert("All settings");
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save profile");
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to save settings. Please try again.",
+      );
     } finally {
-      setSavingProfile(false);
+      setSavingAll(false);
     }
   };
 
-  const handleSavePreferences = async () => {
-    setSavingPreferences(true);
-    try {
-      await apiService.saveSettings(getFullFormData());
-      showSuccessAlert("Preferences");
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save preferences");
-    } finally {
-      setSavingPreferences(false);
-    }
-  };
-
-  const handleSaveNotifications = async () => {
-    setSavingNotifications(true);
-    try {
-      await apiService.saveSettings(getFullFormData());
-      showSuccessAlert("Notifications");
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save notifications");
-    } finally {
-      setSavingNotifications(false);
-    }
-  };
-
-  const handleSavePrivacy = async () => {
-    setSavingPrivacy(true);
-    try {
-      await apiService.saveSettings(getFullFormData());
-      showSuccessAlert("Privacy settings");
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save privacy settings");
-    } finally {
-      setSavingPrivacy(false);
-    }
-  };
-
+  // SADECE Challenge Scheduling için kaydet + alarmı başlat
   const handleSaveSchedule = async () => {
     setSavingSchedule(true);
     try {
@@ -251,20 +284,59 @@ export default function SettingsScreen({ navigation }: any) {
           end: slot.end,
         })),
       });
+
       showSuccessAlert("Schedule settings");
-      
+
       try {
         const challenge = await apiService.getRandomChallenge();
         setAlarmChallenge(challenge);
         setShowCountdown(true);
         setCountdownValue(3);
-      } catch {
-        setSavingSchedule(false);
+      } catch (error) {
+        console.log("Failed to fetch challenge after schedule save:", error);
       }
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to save schedule settings");
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to save schedule settings",
+      );
+    } finally {
       setSavingSchedule(false);
     }
+  };
+
+  const handleAddTimeSlot = () => {
+    const newSlot: TimeSlot = {
+      id: Date.now().toString(),
+      start: "09:00",
+      end: "17:00",
+    };
+    setForm((f) => ({
+      ...f,
+      challengeScheduleTimes: [...f.challengeScheduleTimes, newSlot],
+    }));
+  };
+
+  const handleRemoveTimeSlot = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      challengeScheduleTimes: f.challengeScheduleTimes.filter(
+        (s) => s.id !== id,
+      ),
+    }));
+  };
+
+  const handleUpdateTimeSlot = (
+    id: string,
+    field: "start" | "end",
+    value: string,
+  ) => {
+    setForm((f) => ({
+      ...f,
+      challengeScheduleTimes: f.challengeScheduleTimes.map((s) =>
+        s.id === id ? { ...s, [field]: value } : s,
+      ),
+    }));
   };
 
   useEffect(() => {
@@ -272,18 +344,17 @@ export default function SettingsScreen({ navigation }: any) {
 
     if (countdownValue === 0) {
       setShowCountdown(false);
-      setSavingSchedule(false);
       Vibration.vibrate([0, 200, 100, 200]);
-      
+
       setShowAlarm(true);
       setTimerPhase("running");
       setTimeRemaining(120);
       setChallengeStartTime(new Date());
-      
+
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
-      
+
       timerIntervalRef.current = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
@@ -297,7 +368,7 @@ export default function SettingsScreen({ navigation }: any) {
           return prev - 1;
         });
       }, 1000);
-      
+
       return;
     }
 
@@ -315,39 +386,11 @@ export default function SettingsScreen({ navigation }: any) {
     ]).start();
 
     const timer = setTimeout(() => {
-      setCountdownValue(countdownValue - 1);
+      setCountdownValue((prev) => prev - 1);
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [countdownValue, showCountdown]);
-
-  const handleAddTimeSlot = () => {
-    const newSlot: TimeSlot = {
-      id: Date.now().toString(),
-      start: "09:00",
-      end: "17:00",
-    };
-    setForm((f) => ({
-      ...f,
-      challengeScheduleTimes: [...f.challengeScheduleTimes, newSlot],
-    }));
-  };
-
-  const handleRemoveTimeSlot = (id: string) => {
-    setForm((f) => ({
-      ...f,
-      challengeScheduleTimes: f.challengeScheduleTimes.filter((s) => s.id !== id),
-    }));
-  };
-
-  const handleUpdateTimeSlot = (id: string, field: "start" | "end", value: string) => {
-    setForm((f) => ({
-      ...f,
-      challengeScheduleTimes: f.challengeScheduleTimes.map((s) =>
-        s.id === id ? { ...s, [field]: value } : s
-      ),
-    }));
-  };
+  }, [countdownValue, showCountdown, countdownScale]);
 
   const handleDeleteAccount = () => {
     setShowDeleteModal(true);
@@ -360,12 +403,12 @@ export default function SettingsScreen({ navigation }: any) {
       Alert.alert(
         "Account Deleted",
         "Your account has been successfully deleted.",
-        [{ text: "OK", onPress: () => logout() }]
+        [{ text: "OK", onPress: () => logout() }],
       );
     } catch (error: any) {
       Alert.alert(
         "Account Deletion Requested",
-        "Your account deletion request has been submitted. You will receive an email confirmation shortly."
+        "Your account deletion request has been submitted. You will receive an email confirmation shortly.",
       );
     }
   };
@@ -375,11 +418,11 @@ export default function SettingsScreen({ navigation }: any) {
     setTimerPhase("running");
     setTimeRemaining(120);
     setChallengeStartTime(new Date());
-    
+
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
-    
+
     timerIntervalRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
@@ -413,7 +456,7 @@ export default function SettingsScreen({ navigation }: any) {
     setTimerPhase("initial");
     setTimeRemaining(120);
     Alert.alert("Ertelendi", "Challenge 2 dakika ertelendi.");
-    
+
     setTimeout(async () => {
       try {
         const challenge = await apiService.getRandomChallenge();
@@ -430,34 +473,40 @@ export default function SettingsScreen({ navigation }: any) {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
     }
-    
+
     const timeSpent = challengeStartTime
       ? Math.floor((Date.now() - challengeStartTime.getTime()) / 1000)
       : 120;
-    
+
     setShowAlarm(false);
-    
+
     if (status === "failed") {
-      setRandomMessageIndex(Math.floor(Math.random() * ENCOURAGING_MESSAGES.length));
+      setRandomMessageIndex(
+        Math.floor(Math.random() * ENCOURAGING_MESSAGES.length),
+      );
     }
-    
+
     setResultStatus(status);
-    setEarnedPoints(status === "success" ? (alarmChallenge?.points || 20) : 0);
+    setEarnedPoints(status === "success" ? alarmChallenge?.points || 20 : 0);
     setShowResultModal(true);
-    
+
     if (status === "success") {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 3000);
     }
-    
+
     try {
       if (alarmChallenge?.id) {
-        await apiService.completeChallenge(alarmChallenge.id, timeSpent, status);
+        await apiService.completeChallenge(
+          alarmChallenge.id,
+          timeSpent,
+          status,
+        );
       }
     } catch (error) {
       console.log("Error completing challenge:", error);
     }
-    
+
     setTimerPhase("initial");
     setTimeRemaining(120);
     setChallengeStartTime(null);
@@ -478,48 +527,91 @@ export default function SettingsScreen({ navigation }: any) {
   }, []);
 
   const themeLabels = { system: "System", light: "Light", dark: "Dark" };
-  const languageLabels = { en: "English", tr: "Türkçe", de: "Deutsch", es: "Español" };
-  const visibilityLabels = { public: "Public", friends: "Friends", private: "Private" };
+  const languageLabels = {
+    en: "English",
+    tr: "Türkçe",
+    de: "Deutsch",
+    es: "Español",
+  };
+  const visibilityLabels = {
+    public: "Public",
+    friends: "Friends",
+    private: "Private",
+  };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading settings...</Text>
+      <View style={[styles.loadingContainer, themed.container]}>
+        <Text style={[styles.loadingText, themed.secondaryText]}>
+          Loading settings...
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <View style={[styles.container, themed.container]}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>👤</Text>
+            <Image source={profileIcon} style={styles.sectionIconImage} />
             <View>
-              <Text style={styles.sectionTitle}>Profile</Text>
-              <Text style={styles.sectionDescription}>
+              <Text style={[styles.sectionTitle, themed.primaryText]}>
+                Profile
+              </Text>
+              <Text style={[styles.sectionDescription, themed.secondaryText]}>
                 Update your basic information and profile photo.
               </Text>
             </View>
           </View>
-          <View style={styles.card}>
+          <View
+            style={[
+              styles.card,
+              themed.card,
+              // @ts-ignore
+              themed.cardShadow,
+            ]}
+          >
             <View style={styles.avatarRow}>
               {form.profileImageUrl ? (
-                <Image source={{ uri: form.profileImageUrl }} style={styles.avatar} />
+                <Image
+                  source={{ uri: form.profileImageUrl }}
+                  style={styles.avatar}
+                />
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Text style={styles.avatarInitials}>{getInitials()}</Text>
                 </View>
               )}
               <View style={styles.avatarButtons}>
-                <TouchableOpacity style={styles.changePhotoButton} onPress={handlePickImage}>
-                  <Text style={styles.changePhotoText}>📷 Change Photo</Text>
+                <TouchableOpacity
+                  style={styles.changePhotoButton}
+                  onPress={handlePickImage}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Image
+                      source={cameraIcon}
+                      style={{ width: 18, height: 18, resizeMode: "contain" }}
+                    />
+                    <Text style={styles.changePhotoText}>Change Photo</Text>
+                  </View>
                 </TouchableOpacity>
                 {form.profileImageUrl && (
                   <TouchableOpacity
                     style={styles.removePhotoButton}
-                    onPress={() => setForm((f) => ({ ...f, profileImageUrl: null }))}
+                    onPress={() =>
+                      setForm((f) => ({ ...f, profileImageUrl: null }))
+                    }
                   >
                     <Text style={styles.removePhotoText}>Remove</Text>
                   </TouchableOpacity>
@@ -527,11 +619,14 @@ export default function SettingsScreen({ navigation }: any) {
               </View>
             </View>
 
+            {/* First & Last name */}
             <View style={styles.inputRow}>
               <View style={styles.inputHalf}>
-                <Text style={styles.inputLabel}>First name</Text>
+                <Text style={[styles.inputLabel, themed.primaryText]}>
+                  First name
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, themed.input]}
                   value={form.firstName}
                   onChangeText={(v) => setForm((f) => ({ ...f, firstName: v }))}
                   placeholder="Jane"
@@ -539,9 +634,11 @@ export default function SettingsScreen({ navigation }: any) {
                 />
               </View>
               <View style={styles.inputHalf}>
-                <Text style={styles.inputLabel}>Last name</Text>
+                <Text style={[styles.inputLabel, themed.primaryText]}>
+                  Last name
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, themed.input]}
                   value={form.lastName}
                   onChangeText={(v) => setForm((f) => ({ ...f, lastName: v }))}
                   placeholder="Doe"
@@ -550,11 +647,14 @@ export default function SettingsScreen({ navigation }: any) {
               </View>
             </View>
 
-            <View style={styles.inputRow}>
-              <View style={styles.inputHalf}>
-                <Text style={styles.inputLabel}>Username</Text>
+            {/* Username & Email - vertical */}
+            <View style={styles.inputRowColumn}>
+              <View style={styles.inputFull}>
+                <Text style={[styles.inputLabel, themed.primaryText]}>
+                  Username
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, themed.input]}
                   value={form.username}
                   onChangeText={(v) => setForm((f) => ({ ...f, username: v }))}
                   placeholder="janedoe"
@@ -562,10 +662,12 @@ export default function SettingsScreen({ navigation }: any) {
                   autoCapitalize="none"
                 />
               </View>
-              <View style={styles.inputHalf}>
-                <Text style={styles.inputLabel}>Email</Text>
+              <View style={styles.inputFull}>
+                <Text style={[styles.inputLabel, themed.primaryText]}>
+                  Email
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, themed.input]}
                   value={form.email}
                   onChangeText={(v) => setForm((f) => ({ ...f, email: v }))}
                   placeholder="jane@example.com"
@@ -576,201 +678,239 @@ export default function SettingsScreen({ navigation }: any) {
               </View>
             </View>
           </View>
-          <TouchableOpacity
-            style={[styles.saveButton, savingProfile && styles.buttonDisabled]}
-            onPress={handleSaveProfile}
-            disabled={savingProfile}
-          >
-            <Text style={styles.saveButtonText}>
-              {savingProfile ? "Saving..." : "💾 Save Changes"}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* Preferences Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>🎨</Text>
+            <Image source={preferencesIcon} style={styles.sectionIconImage} />
             <View>
-              <Text style={styles.sectionTitle}>Preferences</Text>
-              <Text style={styles.sectionDescription}>
-                Appearance and language settings.
+              <Text style={[styles.sectionTitle, themed.primaryText]}>
+                Preferences
               </Text>
             </View>
           </View>
-          <View style={styles.card}>
+          <View
+            style={[
+              styles.card,
+              themed.card,
+              // @ts-ignore
+              themed.cardShadow,
+            ]}
+          >
             <View style={styles.selectRow}>
               <View style={styles.selectHalf}>
-                <Text style={styles.inputLabel}>Theme</Text>
+                <Text style={[styles.inputLabel, themed.primaryText]}>
+                  Theme
+                </Text>
                 <TouchableOpacity
-                  style={styles.selectButton}
+                  style={[styles.selectButton, themed.input]}
                   onPress={() => setShowThemePicker(true)}
                 >
-                  <Text style={styles.selectButtonText}>{themeLabels[form.theme]}</Text>
-                  <Text style={styles.selectArrow}>▼</Text>
+                  <Text style={[styles.selectButtonText, themed.primaryText]}>
+                    {themeLabels[form.theme]}
+                  </Text>
+                  <Text style={[styles.selectArrow, themed.secondaryText]}>
+                    ▼
+                  </Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.selectHalf}>
-                <Text style={styles.inputLabel}>Language</Text>
+                <Text style={[styles.inputLabel, themed.primaryText]}>
+                  Language
+                </Text>
                 <TouchableOpacity
-                  style={styles.selectButton}
+                  style={[styles.selectButton, themed.input]}
                   onPress={() => setShowLanguagePicker(true)}
                 >
-                  <Text style={styles.selectButtonText}>
-                    🌐 {languageLabels[form.language as keyof typeof languageLabels]}
+                  <Text style={[styles.selectButtonText, themed.primaryText]}>
+                    🌐{" "}
+                    {
+                      languageLabels[
+                        form.language as keyof typeof languageLabels
+                      ]
+                    }
                   </Text>
-                  <Text style={styles.selectArrow}>▼</Text>
+                  <Text style={[styles.selectArrow, themed.secondaryText]}>
+                    ▼
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
-          <TouchableOpacity
-            style={[styles.saveButton, savingPreferences && styles.buttonDisabled]}
-            onPress={handleSavePreferences}
-            disabled={savingPreferences}
-          >
-            <Text style={styles.saveButtonText}>
-              {savingPreferences ? "Saving..." : "💾 Save Changes"}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* Notifications Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>🔔</Text>
+            <Image source={notificationsIcon} style={styles.sectionIconImage} />
             <View>
-              <Text style={styles.sectionTitle}>Notifications</Text>
-              <Text style={styles.sectionDescription}>
-                Choose how you want to be notified about activity and progress.
+              <Text style={[styles.sectionTitle, themed.primaryText]}>
+                Notifications
               </Text>
             </View>
           </View>
-          <View style={styles.card}>
+          <View
+            style={[
+              styles.card,
+              themed.card,
+              // @ts-ignore
+              themed.cardShadow,
+            ]}
+          >
             <View style={styles.toggleItem}>
               <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>Email notifications</Text>
-                <Text style={styles.toggleDescription}>
+                <Text style={[styles.toggleLabel, themed.primaryText]}>
+                  Email notifications
+                </Text>
+                <Text style={[styles.toggleDescription, themed.secondaryText]}>
                   Updates about challenges and weekly summaries.
                 </Text>
               </View>
               <Switch
                 value={form.emailNotifications}
-                onValueChange={(v) => setForm((f) => ({ ...f, emailNotifications: v }))}
-                trackColor={{ false: "#e2e8f0", true: "#3b82f6" }}
-                thumbColor="#fff"
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, emailNotifications: v }))
+                }
+                trackColor={{
+                  false: "#e2e8f0",
+                  true: "#000000",
+                }}
+                thumbColor="#ffffff"
               />
             </View>
             <View style={styles.separator} />
             <View style={styles.toggleItem}>
               <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>Push notifications</Text>
-                <Text style={styles.toggleDescription}>
+                <Text style={[styles.toggleLabel, themed.primaryText]}>
+                  Push notifications
+                </Text>
+                <Text style={[styles.toggleDescription, themed.secondaryText]}>
                   Get notified instantly on new activity.
                 </Text>
               </View>
               <Switch
                 value={form.pushNotifications}
-                onValueChange={(v) => setForm((f) => ({ ...f, pushNotifications: v }))}
-                trackColor={{ false: "#e2e8f0", true: "#3b82f6" }}
-                thumbColor="#fff"
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, pushNotifications: v }))
+                }
+                trackColor={{
+                  false: "#e2e8f0",
+                  true: "#000000",
+                }}
+                thumbColor="#ffffff"
               />
             </View>
             <View style={styles.separator} />
             <View style={styles.toggleItem}>
               <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>Weekly summary</Text>
-                <Text style={styles.toggleDescription}>
+                <Text style={[styles.toggleLabel, themed.primaryText]}>
+                  Weekly summary
+                </Text>
+                <Text style={[styles.toggleDescription, themed.secondaryText]}>
                   A recap of your progress every week.
                 </Text>
               </View>
               <Switch
                 value={form.weeklySummary}
-                onValueChange={(v) => setForm((f) => ({ ...f, weeklySummary: v }))}
-                trackColor={{ false: "#e2e8f0", true: "#3b82f6" }}
-                thumbColor="#fff"
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, weeklySummary: v }))
+                }
+                trackColor={{
+                  false: "#e2e8f0",
+                  true: "#000000",
+                }}
+                thumbColor="#ffffff"
               />
             </View>
           </View>
-          <TouchableOpacity
-            style={[styles.saveButton, savingNotifications && styles.buttonDisabled]}
-            onPress={handleSaveNotifications}
-            disabled={savingNotifications}
-          >
-            <Text style={styles.saveButtonText}>
-              {savingNotifications ? "Saving..." : "💾 Save Changes"}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* Privacy Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>🛡️</Text>
+            <Image source={privacyIcon} style={styles.sectionIconImage} />
             <View>
-              <Text style={styles.sectionTitle}>Privacy</Text>
-              <Text style={styles.sectionDescription}>
-                Control who can see your activity and how your data is used.
+              <Text style={[styles.sectionTitle, themed.primaryText]}>
+                Privacy
               </Text>
             </View>
           </View>
-          <View style={styles.card}>
+          <View
+            style={[
+              styles.card,
+              themed.card,
+              // @ts-ignore
+              themed.cardShadow,
+            ]}
+          >
             <View style={styles.selectItemFull}>
-              <Text style={styles.inputLabel}>Profile visibility</Text>
+              <Text style={[styles.inputLabel, themed.primaryText]}>
+                Profile visibility
+              </Text>
               <TouchableOpacity
-                style={styles.selectButton}
+                style={[styles.selectButton, themed.input]}
                 onPress={() => setShowVisibilityPicker(true)}
               >
-                <Text style={styles.selectButtonText}>
+                <Text style={[styles.selectButtonText, themed.primaryText]}>
                   {visibilityLabels[form.profileVisibility]}
                 </Text>
-                <Text style={styles.selectArrow}>▼</Text>
+                <Text style={[styles.selectArrow, themed.secondaryText]}>
+                  ▼
+                </Text>
               </TouchableOpacity>
             </View>
             <View style={styles.separator} />
             <View style={styles.toggleItem}>
               <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>Allow anonymized data sharing</Text>
-                <Text style={styles.toggleDescription}>
+                <Text style={[styles.toggleLabel, themed.primaryText]}>
+                  Allow anonymized data sharing
+                </Text>
+                <Text style={[styles.toggleDescription, themed.secondaryText]}>
                   Help us improve by sharing usage metrics.
                 </Text>
               </View>
               <Switch
                 value={form.dataSharing}
-                onValueChange={(v) => setForm((f) => ({ ...f, dataSharing: v }))}
-                trackColor={{ false: "#e2e8f0", true: "#3b82f6" }}
-                thumbColor="#fff"
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, dataSharing: v }))
+                }
+                trackColor={{
+                  false: "#e2e8f0",
+                  true: "#000000",
+                }}
+                thumbColor="#ffffff"
               />
             </View>
           </View>
-          <TouchableOpacity
-            style={[styles.saveButton, savingPrivacy && styles.buttonDisabled]}
-            onPress={handleSavePrivacy}
-            disabled={savingPrivacy}
-          >
-            <Text style={styles.saveButtonText}>
-              {savingPrivacy ? "Saving..." : "💾 Save Changes"}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* Challenge Scheduling Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>⏰</Text>
+            <Image source={alarmIcon} style={styles.sectionIconImage} />
             <View>
-              <Text style={styles.sectionTitle}>Challenge Scheduling</Text>
-              <Text style={styles.sectionDescription}>
-                Set up when you want to receive challenge notifications.
+              <Text style={[styles.sectionTitle, themed.primaryText]}>
+                Challenge Scheduling
               </Text>
             </View>
           </View>
-          <View style={styles.card}>
+          <View
+            style={[
+              styles.card,
+              themed.card,
+              // @ts-ignore
+              themed.cardShadow,
+            ]}
+          >
             <View style={styles.toggleItem}>
               <View style={styles.toggleInfo}>
-                <Text style={styles.toggleLabel}>Enable scheduled notifications</Text>
-                <Text style={styles.toggleDescription}>
-                  Receive automatic challenge notifications during your selected time slots.
+                <Text style={[styles.toggleLabel, themed.primaryText]}>
+                  Enable scheduled notifications
+                </Text>
+                <Text style={[styles.toggleDescription, themed.secondaryText]}>
+                  Receive automatic challenge notifications during your selected
+                  time slots.
                 </Text>
               </View>
               <Switch
@@ -778,8 +918,11 @@ export default function SettingsScreen({ navigation }: any) {
                 onValueChange={(v) =>
                   setForm((f) => ({ ...f, enableScheduledNotifications: v }))
                 }
-                trackColor={{ false: "#e2e8f0", true: "#3b82f6" }}
-                thumbColor="#fff"
+                trackColor={{
+                  false: "#e2e8f0",
+                  true: "#000000",
+                }}
+                thumbColor="#ffffff"
               />
             </View>
 
@@ -787,8 +930,12 @@ export default function SettingsScreen({ navigation }: any) {
               <>
                 <View style={styles.separator} />
                 <View style={styles.timeSlotSection}>
-                  <Text style={styles.timeSlotLabel}>Active Time Slots</Text>
-                  <Text style={styles.timeSlotDescription}>
+                  <Text style={[styles.timeSlotLabel, themed.primaryText]}>
+                    Active Time Slots
+                  </Text>
+                  <Text
+                    style={[styles.timeSlotDescription, themed.secondaryText]}
+                  >
                     Add time ranges when you want to receive challenges.
                   </Text>
 
@@ -796,19 +943,25 @@ export default function SettingsScreen({ navigation }: any) {
                     <View key={slot.id} style={styles.timeSlotRow}>
                       <View style={styles.timeInputContainer}>
                         <TextInput
-                          style={styles.timeInput}
+                          style={[styles.timeInput, themed.input]}
                           value={slot.start}
-                          onChangeText={(v) => handleUpdateTimeSlot(slot.id, "start", v)}
+                          onChangeText={(v) =>
+                            handleUpdateTimeSlot(slot.id, "start", v)
+                          }
                           placeholder="09:00"
                           placeholderTextColor="#94a3b8"
                         />
                       </View>
-                      <Text style={styles.toText}>to</Text>
+                      <Text style={[styles.toText, themed.secondaryText]}>
+                        to
+                      </Text>
                       <View style={styles.timeInputContainer}>
                         <TextInput
-                          style={styles.timeInput}
+                          style={[styles.timeInput, themed.input]}
                           value={slot.end}
-                          onChangeText={(v) => handleUpdateTimeSlot(slot.id, "end", v)}
+                          onChangeText={(v) =>
+                            handleUpdateTimeSlot(slot.id, "end", v)
+                          }
                           placeholder="17:00"
                           placeholderTextColor="#94a3b8"
                         />
@@ -822,41 +975,70 @@ export default function SettingsScreen({ navigation }: any) {
                     </View>
                   ))}
 
-                  <TouchableOpacity style={styles.addSlotButton} onPress={handleAddTimeSlot}>
-                    <Text style={styles.addSlotText}>+ Add Time Slot</Text>
-                  </TouchableOpacity>
+                  {/* Add + Save yan yana aynı tasarım */}
+                  <View style={styles.timeSlotActionsRow}>
+                    <TouchableOpacity
+                      style={styles.addSlotButton}
+                      onPress={handleAddTimeSlot}
+                    >
+                      <Text style={styles.addSlotText}>+ Add Time Slot</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.addSlotButton}
+                      onPress={handleSaveSchedule}
+                      disabled={savingSchedule}
+                    >
+                      <Text style={styles.addSlotText}>
+                        {savingSchedule ? "Saving..." : "Save"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </>
             )}
           </View>
-          <TouchableOpacity
-            style={[styles.saveButton, savingSchedule && styles.buttonDisabled]}
-            onPress={handleSaveSchedule}
-            disabled={savingSchedule}
-          >
-            <Text style={styles.saveButtonText}>
-              {savingSchedule ? "Saving..." : "💾 Save Changes"}
-            </Text>
-          </TouchableOpacity>
+
+          <View style={styles.globalSaveContainer}>
+            <TouchableOpacity
+              style={[styles.saveButton, savingAll && styles.buttonDisabled]}
+              onPress={handleSaveAll}
+              disabled={savingAll}
+            >
+              <Text style={styles.saveButtonText}>
+                {savingAll ? "Saving..." : "Save All Changes"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Danger Zone Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionIcon}>⚠️</Text>
+            <Image source={dangerIcon} style={styles.sectionIconImage} />
             <View>
-              <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
-              <Text style={styles.sectionDescription}>
-                Irreversible and destructive actions.
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  styles.dangerTitle,
+                  { color: "#dc2626" },
+                ]}
+              >
+                Danger Zone
               </Text>
             </View>
           </View>
+
           <View style={styles.dangerCard}>
             <Text style={styles.dangerDescription}>
-              Once you delete your account, there is no going back. Please be certain.
+              Once you delete your account, there is no going back. Please be
+              certain.
             </Text>
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
-              <Text style={styles.deleteButtonText}>🗑️ Delete Account</Text>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDeleteAccount}
+            >
+              <Text style={styles.deleteButtonText}>Delete Account</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -894,7 +1076,9 @@ export default function SettingsScreen({ navigation }: any) {
                 >
                   {themeLabels[option]}
                 </Text>
-                {form.theme === option && <Text style={styles.checkmark}>✓</Text>}
+                {form.theme === option && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -931,7 +1115,9 @@ export default function SettingsScreen({ navigation }: any) {
                 >
                   {languageLabels[option]}
                 </Text>
-                {form.language === option && <Text style={styles.checkmark}>✓</Text>}
+                {form.language === option && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -953,7 +1139,8 @@ export default function SettingsScreen({ navigation }: any) {
                 key={option}
                 style={[
                   styles.pickerOption,
-                  form.profileVisibility === option && styles.pickerOptionSelected,
+                  form.profileVisibility === option &&
+                    styles.pickerOptionSelected,
                 ]}
                 onPress={() => {
                   setForm((f) => ({ ...f, profileVisibility: option }));
@@ -963,12 +1150,15 @@ export default function SettingsScreen({ navigation }: any) {
                 <Text
                   style={[
                     styles.pickerOptionText,
-                    form.profileVisibility === option && styles.pickerOptionTextSelected,
+                    form.profileVisibility === option &&
+                      styles.pickerOptionTextSelected,
                   ]}
                 >
                   {visibilityLabels[option]}
                 </Text>
-                {form.profileVisibility === option && <Text style={styles.checkmark}>✓</Text>}
+                {form.profileVisibility === option && (
+                  <Text style={styles.checkmark}>✓</Text>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -984,8 +1174,8 @@ export default function SettingsScreen({ navigation }: any) {
             </View>
             <Text style={styles.deleteModalTitle}>Delete Account</Text>
             <Text style={styles.deleteModalDescription}>
-              Are you sure you want to delete your account? This action cannot be undone and all
-              your data will be permanently removed.
+              Are you sure you want to delete your account? This action cannot
+              be undone and all your data will be permanently removed.
             </Text>
             <View style={styles.deleteModalButtons}>
               <TouchableOpacity
@@ -994,7 +1184,10 @@ export default function SettingsScreen({ navigation }: any) {
               >
                 <Text style={styles.deleteModalCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteModalConfirm} onPress={confirmDeleteAccount}>
+              <TouchableOpacity
+                style={styles.deleteModalConfirm}
+                onPress={confirmDeleteAccount}
+              >
                 <Text style={styles.deleteModalConfirmText}>Delete</Text>
               </TouchableOpacity>
             </View>
@@ -1002,11 +1195,13 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
       </Modal>
 
-      {/* Countdown Modal - Matches web design */}
+      {/* Countdown Modal */}
       <Modal visible={showCountdown} transparent animationType="fade">
         <View style={styles.countdownOverlay}>
           <View style={styles.countdownModal}>
-            <Text style={styles.countdownTitle}>Challenge Yakında Başlıyor!</Text>
+            <Text style={styles.countdownTitle}>
+              Challenge Yakında Başlıyor!
+            </Text>
             <Text style={styles.countdownSubtitle}>Hazır ol...</Text>
             <Animated.View style={{ transform: [{ scale: countdownScale }] }}>
               <Text style={styles.countdownNumber}>{countdownValue}</Text>
@@ -1015,19 +1210,16 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
       </Modal>
 
-      {/* Challenge Timer Modal - Matches web design with circular timer */}
+      {/* Challenge Timer Modal */}
       <Modal visible={showAlarm} transparent animationType="slide">
         <View style={styles.alarmOverlay}>
           <View style={styles.timerModal}>
-            {/* Challenge Title */}
             <Text style={styles.timerChallengeTitle}>
               {alarmChallenge?.title || "2 Dakikalık Challenge"}
             </Text>
 
-            {/* Circular Timer */}
             <View style={styles.circularTimerContainer}>
               <Svg width={200} height={200} style={styles.circularTimerSvg}>
-                {/* Background circle */}
                 <Circle
                   cx="100"
                   cy="100"
@@ -1036,7 +1228,6 @@ export default function SettingsScreen({ navigation }: any) {
                   stroke="#e2e8f0"
                   strokeWidth="12"
                 />
-                {/* Progress circle */}
                 <Circle
                   cx="100"
                   cy="100"
@@ -1046,45 +1237,57 @@ export default function SettingsScreen({ navigation }: any) {
                   strokeWidth="12"
                   strokeLinecap="round"
                   strokeDasharray={`${2 * Math.PI * 85}`}
-                  strokeDashoffset={`${2 * Math.PI * 85 * (1 - timeRemaining / 120)}`}
+                  strokeDashoffset={`${
+                    2 * Math.PI * 85 * (1 - timeRemaining / 120)
+                  }`}
                   transform="rotate(-90, 100, 100)"
                 />
               </Svg>
               <View style={styles.timerTextContainer}>
-                <Text style={[styles.timerText, { color: `hsl(${(timeRemaining / 120) * 120}, 70%, 45%)` }]}>
-                  {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
+                <Text
+                  style={[
+                    styles.timerText,
+                    {
+                      color: `hsl(${(timeRemaining / 120) * 120}, 70%, 45%)`,
+                    },
+                  ]}
+                >
+                  {Math.floor(timeRemaining / 60)}:
+                  {(timeRemaining % 60).toString().padStart(2, "0")}
                 </Text>
-                <Text style={styles.timerPoints}>⏱️ {alarmChallenge?.points || 20} puan</Text>
+                <Text style={styles.timerPoints}>
+                  ⏱️ {alarmChallenge?.points || 20} puan
+                </Text>
               </View>
             </View>
 
-            {/* Challenge Description */}
             <Text style={styles.timerDescription}>
-              {alarmChallenge?.description || "Bu challenge'ı tamamlamak için 2 dakikan var."}
+              {alarmChallenge?.description ||
+                "Bu challenge'ı tamamlamak için 2 dakikan var."}
             </Text>
 
-            {/* Instructions Box */}
             {alarmChallenge?.instructions && (
               <View style={styles.instructionsBox}>
                 <Text style={styles.instructionsTitle}>Talimatlar:</Text>
-                <Text style={styles.instructionsText}>{alarmChallenge.instructions}</Text>
+                <Text style={styles.instructionsText}>
+                  {alarmChallenge.instructions}
+                </Text>
               </View>
             )}
 
-            {/* Action Buttons - Phase based */}
             {timerPhase === "running" && (
               <View style={styles.timerButtonsRow}>
                 <TouchableOpacity
                   style={styles.cancelButton}
                   onPress={handleCancelChallenge}
                 >
-                  <Text style={styles.cancelButtonText}>✕   İptal</Text>
+                  <Text style={styles.cancelButtonText}>✕ İptal</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.snoozeButton}
                   onPress={handleSnoozeChallenge}
                 >
-                  <Text style={styles.snoozeButtonText}>▷|   2dk Ertele</Text>
+                  <Text style={styles.snoozeButtonText}>▷| 2dk Ertele</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1095,13 +1298,13 @@ export default function SettingsScreen({ navigation }: any) {
                   style={styles.failedButton}
                   onPress={() => handleCompleteChallenge("failed")}
                 >
-                  <Text style={styles.failedButtonText}>✕   Yapmadım</Text>
+                  <Text style={styles.failedButtonText}>✕ Yapmadım</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.successButton}
                   onPress={() => handleCompleteChallenge("success")}
                 >
-                  <Text style={styles.successButtonText}>✓   Yaptım!</Text>
+                  <Text style={styles.successButtonText}>✓ Yaptım!</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1109,16 +1312,20 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
       </Modal>
 
-      {/* Result Modal - Success with Confetti */}
-      <Modal visible={showResultModal && resultStatus === "success"} transparent animationType="fade">
+      {/* Result Modal - Success */}
+      <Modal
+        visible={showResultModal && resultStatus === "success"}
+        transparent
+        animationType="fade"
+      >
         <View style={styles.resultOverlay}>
           {showConfetti && (
             <ConfettiCannon
               ref={confettiRef}
               count={200}
               origin={{ x: SCREEN_WIDTH / 2, y: -10 }}
-              autoStart={true}
-              fadeOut={true}
+              autoStart
+              fadeOut
               colors={["#22c55e", "#10b981", "#86efac", "#34d399", "#6ee7b7"]}
             />
           )}
@@ -1131,17 +1338,28 @@ export default function SettingsScreen({ navigation }: any) {
             </TouchableOpacity>
             <Text style={styles.resultEmoji}>🎉</Text>
             <Text style={styles.resultTitleSuccess}>Tebrikler!</Text>
-            <Text style={styles.resultMessage}>Challenge'ı başarıyla tamamladın!</Text>
-            <Text style={styles.resultPoints}>{earnedPoints} puan kazandın!</Text>
-            <TouchableOpacity style={styles.resultOkButton} onPress={handleCloseResultModal}>
+            <Text style={styles.resultMessage}>
+              Challenge'ı başarıyla tamamladın!
+            </Text>
+            <Text style={styles.resultPoints}>
+              {earnedPoints} puan kazandın!
+            </Text>
+            <TouchableOpacity
+              style={styles.resultOkButton}
+              onPress={handleCloseResultModal}
+            >
               <Text style={styles.resultOkButtonText}>Tamam</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/* Result Modal - Failed with Encouragement */}
-      <Modal visible={showResultModal && resultStatus === "failed"} transparent animationType="fade">
+      {/* Result Modal - Failed */}
+      <Modal
+        visible={showResultModal && resultStatus === "failed"}
+        transparent
+        animationType="fade"
+      >
         <View style={styles.resultOverlay}>
           <View style={styles.resultModal}>
             <TouchableOpacity
@@ -1152,8 +1370,13 @@ export default function SettingsScreen({ navigation }: any) {
             </TouchableOpacity>
             <Text style={styles.resultEmoji}>💪</Text>
             <Text style={styles.resultTitleFailed}>Olsun!</Text>
-            <Text style={styles.resultMessage}>{ENCOURAGING_MESSAGES[randomMessageIndex]}</Text>
-            <TouchableOpacity style={styles.resultOkButton} onPress={handleCloseResultModal}>
+            <Text style={styles.resultMessage}>
+              {ENCOURAGING_MESSAGES[randomMessageIndex]}
+            </Text>
+            <TouchableOpacity
+              style={styles.resultOkButton}
+              onPress={handleCloseResultModal}
+            >
               <Text style={styles.resultOkButtonText}>Tamam</Text>
             </TouchableOpacity>
           </View>
@@ -1166,7 +1389,6 @@ export default function SettingsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
   },
   content: {
     padding: 16,
@@ -1180,33 +1402,26 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 12,
   },
-  sectionIcon: {
-    fontSize: 24,
+  sectionIconImage: {
+    width: 24,
+    height: 24,
     marginTop: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#1e293b",
     marginBottom: 4,
   },
   sectionDescription: {
     fontSize: 14,
-    color: "#64748b",
     lineHeight: 20,
   },
   dangerTitle: {
     color: "#dc2626",
   },
   card: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
   },
   avatarRow: {
     flexDirection: "row",
@@ -1215,20 +1430,20 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   avatarPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#3b82f6",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#6366f1",
     justifyContent: "center",
     alignItems: "center",
   },
   avatarInitials: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "700",
     color: "#fff",
   },
@@ -1258,26 +1473,31 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 12,
+  },
+  inputRowColumn: {
+    flexDirection: "column",
+    paddingHorizontal: 16,
     paddingBottom: 16,
     gap: 12,
   },
   inputHalf: {
     flex: 1,
   },
+  inputFull: {
+    width: "100%",
+  },
   inputLabel: {
     fontSize: 14,
     fontWeight: "500",
-    color: "#374151",
     marginBottom: 8,
   },
   input: {
-    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
     borderRadius: 10,
     padding: 12,
     fontSize: 16,
-    color: "#1e293b",
   },
   selectRow: {
     flexDirection: "row",
@@ -1291,9 +1511,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   selectButton: {
-    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
     borderRadius: 10,
     padding: 12,
     flexDirection: "row",
@@ -1302,11 +1520,9 @@ const styles = StyleSheet.create({
   },
   selectButtonText: {
     fontSize: 16,
-    color: "#1e293b",
   },
   selectArrow: {
     fontSize: 12,
-    color: "#64748b",
   },
   separator: {
     height: 1,
@@ -1325,8 +1541,8 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#1e293b",
     marginBottom: 4,
+    color: "#1e293b",
   },
   toggleDescription: {
     fontSize: 14,
@@ -1355,15 +1571,12 @@ const styles = StyleSheet.create({
   },
   timeInputContainer: {
     flex: 1,
-    backgroundColor: "#f1f5f9",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
   },
   timeInput: {
     padding: 12,
     fontSize: 16,
-    color: "#1e293b",
     textAlign: "center",
   },
   toText: {
@@ -1383,33 +1596,48 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
+  timeSlotActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 8,
+  },
   addSlotButton: {
+    flex: 1,
     backgroundColor: "#f1f5f9",
     borderRadius: 10,
-    padding: 14,
+    paddingVertical: 12,
     alignItems: "center",
     marginTop: 4,
   },
   addSlotText: {
-    color: "#3b82f6",
+    color: "#000000",
     fontWeight: "600",
-    fontSize: 15,
+    fontSize: 14,
+  },
+
+  // GLOBAL SAVE
+  globalSaveContainer: {
+    paddingHorizontal: 16,
+    marginTop: 8,
   },
   saveButton: {
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#111827",
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     alignItems: "center",
-    marginTop: 12,
+    justifyContent: "center",
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
+    color: "#ffffff",
+    fontSize: 15,
     fontWeight: "600",
   },
+
   dangerCard: {
     backgroundColor: "#fef2f2",
     borderRadius: 16,
@@ -1426,12 +1654,12 @@ const styles = StyleSheet.create({
   deleteButton: {
     backgroundColor: "#dc2626",
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
     alignItems: "center",
   },
   deleteButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
   },
   bottomSpacer: {
@@ -1565,134 +1793,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  countdownContainer: {
-    alignItems: "center",
-  },
-  countdownNumber: {
-    fontSize: 160,
-    fontWeight: "800",
-    color: "#3b82f6",
-  },
-  countdownText: {
-    fontSize: 24,
-    color: "#94a3b8",
-    marginTop: 16,
-  },
-  alarmOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  alarmModal: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 24,
-    width: "100%",
-    maxWidth: 360,
-    alignItems: "center",
-  },
-  alarmIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#eff6ff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  alarmIcon: {
-    fontSize: 40,
-  },
-  alarmTitle: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 8,
-  },
-  alarmSubtitle: {
-    fontSize: 16,
-    color: "#64748b",
-    marginBottom: 20,
-  },
-  alarmChallengeCard: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 16,
-    padding: 16,
-    width: "100%",
-    marginBottom: 20,
-  },
-  alarmChallengeTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: 8,
-  },
-  alarmChallengeDescription: {
-    fontSize: 14,
-    color: "#64748b",
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  alarmChallengeTags: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  alarmTag: {
-    backgroundColor: "#e2e8f0",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  alarmTagCategory: {
-    backgroundColor: "#dbeafe",
-  },
-  alarmTagText: {
-    fontSize: 12,
-    color: "#475569",
-    fontWeight: "500",
-  },
-  alarmStartButton: {
-    backgroundColor: "#3b82f6",
-    borderRadius: 14,
-    padding: 16,
-    width: "100%",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  alarmStartButtonText: {
-    fontSize: 17,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  alarmSecondaryButtons: {
-    flexDirection: "row",
-    gap: 12,
-    width: "100%",
-  },
-  alarmSecondaryButton: {
-    flex: 1,
-    backgroundColor: "#f1f5f9",
-    borderRadius: 12,
-    padding: 14,
-    alignItems: "center",
-  },
-  alarmSecondaryButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: "#f8fafc",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#64748b",
-  },
   countdownModal: {
     backgroundColor: "#fff",
     borderRadius: 24,
@@ -1711,6 +1811,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#64748b",
     marginBottom: 24,
+  },
+  countdownNumber: {
+    fontSize: 160,
+    fontWeight: "800",
+    color: "#3b82f6",
+  },
+  alarmOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
   timerModal: {
     backgroundColor: "#fff",
@@ -1894,5 +2006,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#fff",
     textAlign: "center",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
   },
 });
