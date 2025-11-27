@@ -452,7 +452,7 @@ export default function SettingsScreen({ navigation }: any) {
     
     try {
       if (alarmChallenge?.id) {
-        await apiService.completeChallenge(alarmChallenge.id, timeSpent);
+        await apiService.completeChallenge(alarmChallenge.id, timeSpent, status);
       }
     } catch (error) {
       console.log("Error completing challenge:", error);

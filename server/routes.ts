@@ -358,23 +358,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const bodySchema = z.object({
           timeSpent: z.number().int().min(0).max(120),
+          status: z.enum(["success", "failed"]).optional().default("success"),
         });
-        const { timeSpent } = bodySchema.parse(req.body);
+        const { timeSpent, status } = bodySchema.parse(req.body);
+
+        const pointsEarned = status === "success" ? challenge.points : 0;
 
         const historyEntry = await storage.addHistoryEntry(userId, {
           challengeId,
           completedAt: new Date().toISOString(),
           timeSpent,
-          pointsEarned: challenge.points,
+          pointsEarned,
         });
 
         const newAchievements =
-          await storage.checkAndUnlockAchievements(userId);
+          status === "success" ? await storage.checkAndUnlockAchievements(userId) : [];
 
         res.json({
           success: true,
           historyEntry,
-          pointsEarned: challenge.points,
+          pointsEarned,
           newAchievements,
         });
       } catch (error) {

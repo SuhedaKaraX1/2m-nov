@@ -136,10 +136,10 @@ class ApiService {
     return this.request<any>('/api/challenges/random');
   }
 
-  async completeChallenge(id: string, timeSpent: number) {
+  async completeChallenge(id: string, timeSpent: number, status: 'success' | 'failed' = 'success') {
     return this.request<any>(`/api/challenges/${id}/complete`, {
       method: 'POST',
-      body: { timeSpent },
+      body: { timeSpent, status },
     });
   }
 
