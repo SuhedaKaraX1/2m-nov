@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,12 +8,12 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-} from 'react-native';
+} from "react-native";
 
 export default function FriendsScreen() {
   const [friends, setFriends] = useState<any[]>([]);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
-  const [friendEmail, setFriendEmail] = useState('');
+  const [friendEmail, setFriendEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
@@ -27,15 +27,15 @@ export default function FriendsScreen() {
 
   const handleSendRequest = async () => {
     if (!friendEmail.trim()) {
-      Alert.alert('Error', 'Please enter an email address');
+      Alert.alert("Error", "Please enter an email address");
       return;
     }
     setSending(true);
     try {
-      Alert.alert('Success', 'Friend request sent!');
-      setFriendEmail('');
+      Alert.alert("Success", "Friend request sent!");
+      setFriendEmail("");
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send request');
+      Alert.alert("Error", error.message || "Failed to send request");
     } finally {
       setSending(false);
     }
@@ -51,8 +51,6 @@ export default function FriendsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>Friends</Text>
-
       <View style={styles.addFriendCard}>
         <Text style={styles.addFriendTitle}>Add a Friend</Text>
         <View style={styles.inputRow}>
@@ -88,7 +86,7 @@ export default function FriendsScreen() {
             <View key={request.id} style={styles.friendCard}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
-                  {request.firstName?.[0] || '?'}
+                  {request.firstName?.[0] || "?"}
                 </Text>
               </View>
               <View style={styles.friendInfo}>
@@ -111,9 +109,7 @@ export default function FriendsScreen() {
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          Your Friends ({friends.length})
-        </Text>
+        <Text style={styles.sectionTitle}>Your Friends ({friends.length})</Text>
         {friends.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>👥</Text>
@@ -127,7 +123,7 @@ export default function FriendsScreen() {
             <View key={friend.id} style={styles.friendCard}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
-                  {friend.firstName?.[0] || '?'}
+                  {friend.firstName?.[0] || "?"}
                 </Text>
               </View>
               <View style={styles.friendInfo}>
@@ -147,28 +143,28 @@ export default function FriendsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
   },
   content: {
     padding: 20,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   screenTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontWeight: "bold",
+    color: "#1e293b",
     marginBottom: 24,
   },
   addFriendCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -176,48 +172,48 @@ const styles = StyleSheet.create({
   },
   addFriendTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
+    color: "#1e293b",
     marginBottom: 12,
   },
   inputRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   input: {
     flex: 1,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: "#f1f5f9",
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
-    color: '#1e293b',
+    color: "#1e293b",
   },
   sendButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: "#3b82f6",
     borderRadius: 12,
     paddingHorizontal: 20,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   buttonDisabled: {
     opacity: 0.7,
   },
   sendButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
+    color: "#1e293b",
     marginBottom: 16,
   },
   friendCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
@@ -226,64 +222,64 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#3b82f6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#3b82f6",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   avatarText: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    textTransform: 'uppercase',
+    fontWeight: "bold",
+    color: "#fff",
+    textTransform: "uppercase",
   },
   friendInfo: {
     flex: 1,
   },
   friendName: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#1e293b',
+    fontWeight: "500",
+    color: "#1e293b",
   },
   friendEmail: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#64748b",
     marginTop: 2,
   },
   requestActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   acceptButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#22c55e',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#22c55e",
+    justifyContent: "center",
+    alignItems: "center",
   },
   acceptText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   declineButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#ef4444',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#ef4444",
+    justifyContent: "center",
+    alignItems: "center",
   },
   declineText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   emptyContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 48,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
   },
   emptyIcon: {
@@ -292,12 +288,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
+    color: "#1e293b",
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#64748b",
   },
 });

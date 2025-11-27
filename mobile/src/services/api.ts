@@ -158,6 +158,33 @@ class ApiService {
   async getCategoryDistribution() {
     return this.request<any[]>('/api/analytics/category');
   }
+
+  async getSettings() {
+    return this.request<any>('/api/settings');
+  }
+
+  async saveSettings(settings: any) {
+    return this.request<any>('/api/settings', {
+      method: 'POST',
+      body: settings,
+    });
+  }
+
+  async saveScheduleSettings(data: {
+    enableNotifications: number;
+    challengeScheduleTimes: { id?: string; start: string; end: string }[];
+  }) {
+    return this.request<any>('/api/settings/schedule', {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  async deleteAccount() {
+    return this.request<any>('/api/account', {
+      method: 'DELETE',
+    });
+  }
 }
 
 export const apiService = new ApiService();
