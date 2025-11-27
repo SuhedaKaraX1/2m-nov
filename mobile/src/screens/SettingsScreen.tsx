@@ -17,8 +17,20 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { apiService } from "../services/api";
 import * as ImagePicker from "expo-image-picker";
+import ConfettiCannon from "react-native-confetti-cannon";
+import Svg, { Circle } from "react-native-svg";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+type TimerPhase = "initial" | "running" | "finished";
+type ResultStatus = "success" | "failed" | null;
+
+const ENCOURAGING_MESSAGES = [
+  "Olsun! Bir dahakine yaparsın 💪",
+  "Sorun değil! Her deneme bir ilerleme 🌟",
+  "Pes etme! Başarı yakın 🚀",
+  "Bir dahaki sefere odaklan! Sen yaparsın 💫",
+];
 
 interface TimeSlot {
   id: string;
@@ -124,6 +136,17 @@ export default function SettingsScreen({ navigation }: any) {
   const [showAlarm, setShowAlarm] = useState(false);
   const [alarmChallenge, setAlarmChallenge] = useState<any>(null);
   const countdownScale = useRef(new Animated.Value(1)).current;
+
+  const [timerPhase, setTimerPhase] = useState<TimerPhase>("initial");
+  const [timeRemaining, setTimeRemaining] = useState(120);
+  const [challengeStartTime, setChallengeStartTime] = useState<Date | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultStatus, setResultStatus] = useState<ResultStatus>(null);
+  const [earnedPoints, setEarnedPoints] = useState(0);
+  const [randomMessageIndex, setRandomMessageIndex] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const confettiRef = useRef<any>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const getInitials = () => {
     const first = form.firstName?.[0] || "";
@@ -251,7 +274,30 @@ export default function SettingsScreen({ navigation }: any) {
       setShowCountdown(false);
       setSavingSchedule(false);
       Vibration.vibrate([0, 200, 100, 200]);
+      
       setShowAlarm(true);
+      setTimerPhase("running");
+      setTimeRemaining(120);
+      setChallengeStartTime(new Date());
+      
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+      
+      timerIntervalRef.current = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            if (timerIntervalRef.current) {
+              clearInterval(timerIntervalRef.current);
+            }
+            setTimerPhase("finished");
+            Vibration.vibrate([0, 200, 100, 200, 100, 200]);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
       return;
     }
 
@@ -325,16 +371,111 @@ export default function SettingsScreen({ navigation }: any) {
   };
 
   const handleStartChallenge = () => {
-    setShowAlarm(false);
-    if (alarmChallenge?.id) {
-      navigation.navigate("ChallengeDetail", { id: alarmChallenge.id });
+    setShowAlarm(true);
+    setTimerPhase("running");
+    setTimeRemaining(120);
+    setChallengeStartTime(new Date());
+    
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
     }
+    
+    timerIntervalRef.current = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+          }
+          setTimerPhase("finished");
+          Vibration.vibrate([0, 200, 100, 200, 100, 200]);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleCancelChallenge = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    setShowAlarm(false);
+    setTimerPhase("initial");
+    setTimeRemaining(120);
+    Alert.alert("İptal Edildi", "Challenge iptal edildi.");
   };
 
   const handleSnoozeChallenge = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
     setShowAlarm(false);
-    Alert.alert("Snoozed", "Challenge snoozed for 2 minutes");
+    setTimerPhase("initial");
+    setTimeRemaining(120);
+    Alert.alert("Ertelendi", "Challenge 2 dakika ertelendi.");
+    
+    setTimeout(async () => {
+      try {
+        const challenge = await apiService.getRandomChallenge();
+        setAlarmChallenge(challenge);
+        setShowCountdown(true);
+        setCountdownValue(3);
+      } catch (error) {
+        console.log("Failed to fetch challenge for snooze:", error);
+      }
+    }, 120000);
   };
+
+  const handleCompleteChallenge = async (status: "success" | "failed") => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    
+    const timeSpent = challengeStartTime
+      ? Math.floor((Date.now() - challengeStartTime.getTime()) / 1000)
+      : 120;
+    
+    setShowAlarm(false);
+    
+    if (status === "failed") {
+      setRandomMessageIndex(Math.floor(Math.random() * ENCOURAGING_MESSAGES.length));
+    }
+    
+    setResultStatus(status);
+    setEarnedPoints(status === "success" ? (alarmChallenge?.points || 20) : 0);
+    setShowResultModal(true);
+    
+    if (status === "success") {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
+    }
+    
+    try {
+      if (alarmChallenge?.id) {
+        await apiService.completeChallenge(alarmChallenge.id, timeSpent);
+      }
+    } catch (error) {
+      console.log("Error completing challenge:", error);
+    }
+    
+    setTimerPhase("initial");
+    setTimeRemaining(120);
+    setChallengeStartTime(null);
+  };
+
+  const handleCloseResultModal = () => {
+    setShowResultModal(false);
+    setResultStatus(null);
+    setShowConfetti(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, []);
 
   const themeLabels = { system: "System", light: "Light", dark: "Dark" };
   const languageLabels = { en: "English", tr: "Türkçe", de: "Deutsch", es: "Español" };
@@ -861,67 +1002,160 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
       </Modal>
 
-      {/* Countdown Modal */}
+      {/* Countdown Modal - Matches web design */}
       <Modal visible={showCountdown} transparent animationType="fade">
         <View style={styles.countdownOverlay}>
-          <Animated.View
-            style={[styles.countdownContainer, { transform: [{ scale: countdownScale }] }]}
-          >
-            <Text style={styles.countdownNumber}>{countdownValue}</Text>
-            <Text style={styles.countdownText}>Get ready...</Text>
-          </Animated.View>
+          <View style={styles.countdownModal}>
+            <Text style={styles.countdownTitle}>Challenge Yakında Başlıyor!</Text>
+            <Text style={styles.countdownSubtitle}>Hazır ol...</Text>
+            <Animated.View style={{ transform: [{ scale: countdownScale }] }}>
+              <Text style={styles.countdownNumber}>{countdownValue}</Text>
+            </Animated.View>
+          </View>
         </View>
       </Modal>
 
-      {/* Challenge Alarm Modal */}
+      {/* Challenge Timer Modal - Matches web design with circular timer */}
       <Modal visible={showAlarm} transparent animationType="slide">
         <View style={styles.alarmOverlay}>
-          <View style={styles.alarmModal}>
-            <View style={styles.alarmIconContainer}>
-              <Text style={styles.alarmIcon}>🔔</Text>
-            </View>
-            <Text style={styles.alarmTitle}>Challenge Time!</Text>
-            <Text style={styles.alarmSubtitle}>It's time for your 2-minute challenge</Text>
+          <View style={styles.timerModal}>
+            {/* Challenge Title */}
+            <Text style={styles.timerChallengeTitle}>
+              {alarmChallenge?.title || "2 Dakikalık Challenge"}
+            </Text>
 
-            <View style={styles.alarmChallengeCard}>
-              <Text style={styles.alarmChallengeTitle}>
-                {alarmChallenge?.title || "Quick Stretch Break"}
-              </Text>
-              <Text style={styles.alarmChallengeDescription}>
-                {alarmChallenge?.description || "Take 2 minutes to complete this challenge."}
-              </Text>
-              <View style={styles.alarmChallengeTags}>
-                <View style={[styles.alarmTag, styles.alarmTagCategory]}>
-                  <Text style={styles.alarmTagText}>
-                    {alarmChallenge?.category || "physical"}
-                  </Text>
-                </View>
-                <View style={styles.alarmTag}>
-                  <Text style={styles.alarmTagText}>
-                    {alarmChallenge?.difficulty || "easy"}
-                  </Text>
-                </View>
-                <View style={styles.alarmTag}>
-                  <Text style={styles.alarmTagText}>⏱️ 2 min</Text>
-                </View>
+            {/* Circular Timer */}
+            <View style={styles.circularTimerContainer}>
+              <Svg width={200} height={200} style={styles.circularTimerSvg}>
+                {/* Background circle */}
+                <Circle
+                  cx="100"
+                  cy="100"
+                  r="85"
+                  fill="none"
+                  stroke="#e2e8f0"
+                  strokeWidth="12"
+                />
+                {/* Progress circle */}
+                <Circle
+                  cx="100"
+                  cy="100"
+                  r="85"
+                  fill="none"
+                  stroke={`hsl(${(timeRemaining / 120) * 120}, 70%, 50%)`}
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 85}`}
+                  strokeDashoffset={`${2 * Math.PI * 85 * (1 - timeRemaining / 120)}`}
+                  transform="rotate(-90, 100, 100)"
+                />
+              </Svg>
+              <View style={styles.timerTextContainer}>
+                <Text style={[styles.timerText, { color: `hsl(${(timeRemaining / 120) * 120}, 70%, 45%)` }]}>
+                  {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
+                </Text>
+                <Text style={styles.timerPoints}>⏱️ {alarmChallenge?.points || 20} puan</Text>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.alarmStartButton} onPress={handleStartChallenge}>
-              <Text style={styles.alarmStartButtonText}>Start Challenge Now</Text>
-            </TouchableOpacity>
+            {/* Challenge Description */}
+            <Text style={styles.timerDescription}>
+              {alarmChallenge?.description || "Bu challenge'ı tamamlamak için 2 dakikan var."}
+            </Text>
 
-            <View style={styles.alarmSecondaryButtons}>
-              <TouchableOpacity style={styles.alarmSecondaryButton} onPress={handleSnoozeChallenge}>
-                <Text style={styles.alarmSecondaryButtonText}>⏰ Snooze (2 min)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.alarmSecondaryButton}
-                onPress={() => setShowAlarm(false)}
-              >
-                <Text style={styles.alarmSecondaryButtonText}>✕ Cancel</Text>
-              </TouchableOpacity>
-            </View>
+            {/* Instructions Box */}
+            {alarmChallenge?.instructions && (
+              <View style={styles.instructionsBox}>
+                <Text style={styles.instructionsTitle}>Talimatlar:</Text>
+                <Text style={styles.instructionsText}>{alarmChallenge.instructions}</Text>
+              </View>
+            )}
+
+            {/* Action Buttons - Phase based */}
+            {timerPhase === "running" && (
+              <View style={styles.timerButtonsRow}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={handleCancelChallenge}
+                >
+                  <Text style={styles.cancelButtonText}>✕   İptal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.snoozeButton}
+                  onPress={handleSnoozeChallenge}
+                >
+                  <Text style={styles.snoozeButtonText}>▷|   2dk Ertele</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {timerPhase === "finished" && (
+              <View style={styles.timerButtonsRow}>
+                <TouchableOpacity
+                  style={styles.failedButton}
+                  onPress={() => handleCompleteChallenge("failed")}
+                >
+                  <Text style={styles.failedButtonText}>✕   Yapmadım</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.successButton}
+                  onPress={() => handleCompleteChallenge("success")}
+                >
+                  <Text style={styles.successButtonText}>✓   Yaptım!</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Result Modal - Success with Confetti */}
+      <Modal visible={showResultModal && resultStatus === "success"} transparent animationType="fade">
+        <View style={styles.resultOverlay}>
+          {showConfetti && (
+            <ConfettiCannon
+              ref={confettiRef}
+              count={200}
+              origin={{ x: SCREEN_WIDTH / 2, y: -10 }}
+              autoStart={true}
+              fadeOut={true}
+              colors={["#22c55e", "#10b981", "#86efac", "#34d399", "#6ee7b7"]}
+            />
+          )}
+          <View style={styles.resultModal}>
+            <TouchableOpacity
+              style={styles.resultCloseButton}
+              onPress={handleCloseResultModal}
+            >
+              <Text style={styles.resultCloseText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.resultEmoji}>🎉</Text>
+            <Text style={styles.resultTitleSuccess}>Tebrikler!</Text>
+            <Text style={styles.resultMessage}>Challenge'ı başarıyla tamamladın!</Text>
+            <Text style={styles.resultPoints}>{earnedPoints} puan kazandın!</Text>
+            <TouchableOpacity style={styles.resultOkButton} onPress={handleCloseResultModal}>
+              <Text style={styles.resultOkButtonText}>Tamam</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Result Modal - Failed with Encouragement */}
+      <Modal visible={showResultModal && resultStatus === "failed"} transparent animationType="fade">
+        <View style={styles.resultOverlay}>
+          <View style={styles.resultModal}>
+            <TouchableOpacity
+              style={styles.resultCloseButton}
+              onPress={handleCloseResultModal}
+            >
+              <Text style={styles.resultCloseText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.resultEmoji}>💪</Text>
+            <Text style={styles.resultTitleFailed}>Olsun!</Text>
+            <Text style={styles.resultMessage}>{ENCOURAGING_MESSAGES[randomMessageIndex]}</Text>
+            <TouchableOpacity style={styles.resultOkButton} onPress={handleCloseResultModal}>
+              <Text style={styles.resultOkButtonText}>Tamam</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1458,5 +1692,207 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: "#64748b",
+  },
+  countdownModal: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 40,
+    alignItems: "center",
+    minWidth: 280,
+  },
+  countdownTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1e293b",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  countdownSubtitle: {
+    fontSize: 16,
+    color: "#64748b",
+    marginBottom: 24,
+  },
+  timerModal: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    maxWidth: 360,
+    alignItems: "center",
+  },
+  timerChallengeTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#1e293b",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  circularTimerContainer: {
+    width: 200,
+    height: 200,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  circularTimerSvg: {
+    position: "absolute",
+  },
+  timerTextContainer: {
+    alignItems: "center",
+  },
+  timerText: {
+    fontSize: 48,
+    fontWeight: "700",
+  },
+  timerPoints: {
+    fontSize: 14,
+    color: "#64748b",
+    marginTop: 4,
+  },
+  timerDescription: {
+    fontSize: 15,
+    color: "#64748b",
+    textAlign: "center",
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  instructionsBox: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+    width: "100%",
+    marginBottom: 20,
+  },
+  instructionsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 8,
+  },
+  instructionsText: {
+    fontSize: 14,
+    color: "#64748b",
+    lineHeight: 20,
+  },
+  timerButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  snoozeButton: {
+    flex: 1,
+    backgroundColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+  },
+  snoozeButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#475569",
+  },
+  failedButton: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#ef4444",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+  },
+  failedButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#ef4444",
+  },
+  successButton: {
+    flex: 1,
+    backgroundColor: "#22c55e",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+  },
+  successButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  resultOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  resultModal: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 32,
+    width: "100%",
+    maxWidth: 320,
+    alignItems: "center",
+  },
+  resultCloseButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    padding: 8,
+  },
+  resultCloseText: {
+    fontSize: 20,
+    color: "#94a3b8",
+  },
+  resultEmoji: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  resultTitleSuccess: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#22c55e",
+    marginBottom: 12,
+  },
+  resultTitleFailed: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  resultMessage: {
+    fontSize: 16,
+    color: "#64748b",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  resultPoints: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#3b82f6",
+    marginBottom: 24,
+  },
+  resultOkButton: {
+    backgroundColor: "#3b82f6",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    width: "100%",
+  },
+  resultOkButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
+    textAlign: "center",
   },
 });
