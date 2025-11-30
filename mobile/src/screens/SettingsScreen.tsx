@@ -13,9 +13,10 @@ import {
   Animated,
   Vibration,
   Dimensions,
-  useColorScheme,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
+import { ThemeMode } from "../theme/types";
 import { apiService } from "../services/api";
 import * as ImagePicker from "expo-image-picker";
 import ConfettiCannon from "react-native-confetti-cannon";
@@ -85,6 +86,7 @@ const DEFAULTS: SettingsData = {
 
 export default function SettingsScreen({ navigation }: any) {
   const { user, logout } = useAuth();
+  const { colors, isDark, themeMode, setThemeMode } = useTheme();
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<SettingsData>({
     ...DEFAULTS,
@@ -94,35 +96,29 @@ export default function SettingsScreen({ navigation }: any) {
     email: user?.email || "",
   });
 
-  // THEME
-  const deviceColorScheme = useColorScheme();
-  const effectiveTheme =
-    form.theme === "system" ? deviceColorScheme || "light" : form.theme;
-  const isDarkMode = effectiveTheme === "dark";
-
   const themed = {
     container: {
-      backgroundColor: isDarkMode ? "#020617" : "#f8fafc",
+      backgroundColor: colors.background,
     },
     card: {
-      backgroundColor: isDarkMode ? "#0f172a" : "#ffffff",
-      borderColor: isDarkMode ? "#1f2937" : "#ffffff",
+      backgroundColor: colors.cardBackground,
+      borderColor: colors.cardBorder,
     },
     primaryText: {
-      color: isDarkMode ? "#e5e7eb" : "#1e293b",
+      color: colors.text,
     },
     secondaryText: {
-      color: isDarkMode ? "#9ca3af" : "#64748b",
+      color: colors.textSecondary,
     },
     input: {
-      backgroundColor: isDarkMode ? "#020617" : "#f8fafc",
-      borderColor: isDarkMode ? "#1f2937" : "#e2e8f0",
-      color: isDarkMode ? "#e5e7eb" : "#1e293b",
+      backgroundColor: colors.inputBackground,
+      borderColor: colors.inputBorder,
+      color: colors.inputText,
     },
-    cardShadow: isDarkMode
+    cardShadow: isDark
       ? {}
       : {
-          shadowColor: "#000",
+          shadowColor: colors.cardShadow,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.05,
           shadowRadius: 8,
@@ -708,7 +704,7 @@ export default function SettingsScreen({ navigation }: any) {
                   onPress={() => setShowThemePicker(true)}
                 >
                   <Text style={[styles.selectButtonText, themed.primaryText]}>
-                    {themeLabels[form.theme]}
+                    {themeLabels[themeMode]}
                   </Text>
                   <Text style={[styles.selectArrow, themed.secondaryText]}>
                     ▼
@@ -1001,7 +997,11 @@ export default function SettingsScreen({ navigation }: any) {
 
           <View style={styles.globalSaveContainer}>
             <TouchableOpacity
-              style={[styles.saveButton, savingAll && styles.buttonDisabled]}
+              style={[
+                styles.saveButton,
+                { backgroundColor: colors.primary },
+                savingAll && styles.buttonDisabled,
+              ]}
               onPress={handleSaveAll}
               disabled={savingAll}
             >
@@ -1049,11 +1049,11 @@ export default function SettingsScreen({ navigation }: any) {
       {/* Theme Picker Modal */}
       <Modal visible={showThemePicker} transparent animationType="slide">
         <View style={styles.pickerModalOverlay}>
-          <View style={styles.pickerModal}>
+          <View style={[styles.pickerModal, { backgroundColor: colors.modalBackground }]}>
             <View style={styles.pickerHeader}>
-              <Text style={styles.pickerTitle}>Select Theme</Text>
+              <Text style={[styles.pickerTitle, { color: colors.text }]}>Select Theme</Text>
               <TouchableOpacity onPress={() => setShowThemePicker(false)}>
-                <Text style={styles.pickerDone}>Done</Text>
+                <Text style={[styles.pickerDone, { color: colors.primary }]}>Done</Text>
               </TouchableOpacity>
             </View>
             {(["system", "light", "dark"] as const).map((option) => (
@@ -1061,23 +1061,25 @@ export default function SettingsScreen({ navigation }: any) {
                 key={option}
                 style={[
                   styles.pickerOption,
-                  form.theme === option && styles.pickerOptionSelected,
+                  { borderBottomColor: colors.divider },
+                  themeMode === option && [styles.pickerOptionSelected, { backgroundColor: colors.primaryLight }],
                 ]}
-                onPress={() => {
-                  setForm((f) => ({ ...f, theme: option }));
+                onPress={async () => {
+                  await setThemeMode(option as ThemeMode);
                   setShowThemePicker(false);
                 }}
               >
                 <Text
                   style={[
                     styles.pickerOptionText,
-                    form.theme === option && styles.pickerOptionTextSelected,
+                    { color: colors.textSecondary },
+                    themeMode === option && [styles.pickerOptionTextSelected, { color: colors.primary }],
                   ]}
                 >
                   {themeLabels[option]}
                 </Text>
-                {form.theme === option && (
-                  <Text style={styles.checkmark}>✓</Text>
+                {themeMode === option && (
+                  <Text style={[styles.checkmark, { color: colors.primary }]}>✓</Text>
                 )}
               </TouchableOpacity>
             ))}

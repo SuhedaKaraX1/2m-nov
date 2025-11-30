@@ -9,10 +9,12 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 import { apiService } from '../services/api';
 import { Challenge, categoryConfig, difficultyConfig, ChallengeCategory } from '../types';
 
 export default function ChallengeDetailScreen({ route, navigation }: any) {
+  const { colors, isDark } = useTheme();
   const { id } = route.params;
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,21 +102,21 @@ export default function ChallengeDetailScreen({ route, navigation }: any) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   if (!challenge) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Challenge not found</Text>
+      <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.textSecondary }]}>Challenge not found</Text>
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: colors.primary }]}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>Go Back</Text>
+          <Text style={[styles.backButtonText, { color: colors.textInverse }]}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -122,18 +124,18 @@ export default function ChallengeDetailScreen({ route, navigation }: any) {
 
   if (isComplete) {
     return (
-      <View style={styles.completeContainer}>
+      <View style={[styles.completeContainer, { backgroundColor: colors.background }]}>
         <Text style={styles.completeIcon}>🎉</Text>
-        <Text style={styles.completeTitle}>Challenge Complete!</Text>
-        <Text style={styles.completePoints}>+{pointsEarned} points</Text>
-        <Text style={styles.completeMessage}>
+        <Text style={[styles.completeTitle, { color: colors.text }]}>Challenge Complete!</Text>
+        <Text style={[styles.completePoints, { color: colors.success }]}>+{pointsEarned} points</Text>
+        <Text style={[styles.completeMessage, { color: colors.textSecondary }]}>
           Great job! You've completed "{challenge.title}"
         </Text>
         <TouchableOpacity
-          style={styles.doneButton}
+          style={[styles.doneButton, { backgroundColor: colors.primary }]}
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.doneButtonText}>Done</Text>
+          <Text style={[styles.doneButtonText, { color: colors.textInverse }]}>Done</Text>
         </TouchableOpacity>
       </View>
     );
@@ -145,7 +147,10 @@ export default function ChallengeDetailScreen({ route, navigation }: any) {
   });
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: colors.background }]} 
+      contentContainerStyle={styles.content}
+    >
       <View style={styles.header}>
         <View
           style={[
@@ -153,11 +158,11 @@ export default function ChallengeDetailScreen({ route, navigation }: any) {
             {
               backgroundColor:
                 categoryConfig[challenge.category as ChallengeCategory]?.color ||
-                '#3b82f6',
+                colors.primary,
             },
           ]}
         >
-          <Text style={styles.categoryText}>
+          <Text style={[styles.categoryText, { color: colors.textInverse }]}>
             {categoryConfig[challenge.category as ChallengeCategory]?.label ||
               challenge.category}
           </Text>
@@ -168,7 +173,7 @@ export default function ChallengeDetailScreen({ route, navigation }: any) {
             {
               backgroundColor:
                 (difficultyConfig[challenge.difficulty as keyof typeof difficultyConfig]
-                  ?.color || '#3b82f6') + '20',
+                  ?.color || colors.primary) + '20',
             },
           ]}
         >
@@ -178,7 +183,7 @@ export default function ChallengeDetailScreen({ route, navigation }: any) {
               {
                 color:
                   difficultyConfig[challenge.difficulty as keyof typeof difficultyConfig]
-                    ?.color || '#3b82f6',
+                    ?.color || colors.primary,
               },
             ]}
           >
@@ -187,45 +192,48 @@ export default function ChallengeDetailScreen({ route, navigation }: any) {
         </View>
       </View>
 
-      <Text style={styles.title}>{challenge.title}</Text>
-      <Text style={styles.description}>{challenge.description}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{challenge.title}</Text>
+      <Text style={[styles.description, { color: colors.textSecondary }]}>{challenge.description}</Text>
 
       <View style={styles.timerContainer}>
-        <View style={styles.timerCircle}>
-          <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
-          <Text style={styles.timerLabel}>
+        <View style={[styles.timerCircle, { backgroundColor: colors.cardBackground, borderColor: colors.primary, shadowColor: colors.cardShadow }]}>
+          <Text style={[styles.timerText, { color: colors.text }]}>{formatTime(timeLeft)}</Text>
+          <Text style={[styles.timerLabel, { color: colors.textSecondary }]}>
             {timerRunning ? 'Time Left' : 'Ready?'}
           </Text>
         </View>
-        <View style={styles.progressBarContainer}>
-          <Animated.View style={[styles.progressBar, { width: progress }]} />
+        <View style={[styles.progressBarContainer, { backgroundColor: colors.progressBackground }]}>
+          <Animated.View style={[styles.progressBar, { width: progress, backgroundColor: colors.primary }]} />
         </View>
       </View>
 
-      <View style={styles.instructionsCard}>
-        <Text style={styles.instructionsTitle}>Instructions</Text>
-        <Text style={styles.instructionsText}>{challenge.instructions}</Text>
+      <View style={[styles.instructionsCard, { backgroundColor: colors.cardBackground }]}>
+        <Text style={[styles.instructionsTitle, { color: colors.text }]}>Instructions</Text>
+        <Text style={[styles.instructionsText, { color: colors.textSecondary }]}>{challenge.instructions}</Text>
       </View>
 
-      <View style={styles.pointsCard}>
-        <Text style={styles.pointsLabel}>Points on completion</Text>
-        <Text style={styles.pointsValue}>+{challenge.points}</Text>
+      <View style={[styles.pointsCard, { backgroundColor: colors.successLight }]}>
+        <Text style={[styles.pointsLabel, { color: colors.success }]}>Points on completion</Text>
+        <Text style={[styles.pointsValue, { color: colors.success }]}>+{challenge.points}</Text>
       </View>
 
       {!timerRunning ? (
-        <TouchableOpacity style={styles.startButton} onPress={startTimer}>
-          <Text style={styles.startButtonText}>Start Challenge</Text>
+        <TouchableOpacity 
+          style={[styles.startButton, { backgroundColor: colors.primary }]} 
+          onPress={startTimer}
+        >
+          <Text style={[styles.startButtonText, { color: colors.textInverse }]}>Start Challenge</Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={[styles.completeButton, completing && styles.buttonDisabled]}
+          style={[styles.completeButton, { backgroundColor: colors.success }, completing && styles.buttonDisabled]}
           onPress={handleComplete}
           disabled={completing}
         >
           {completing ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textInverse} />
           ) : (
-            <Text style={styles.completeButtonText}>Complete Challenge</Text>
+            <Text style={[styles.completeButtonText, { color: colors.textInverse }]}>Complete Challenge</Text>
           )}
         </TouchableOpacity>
       )}
@@ -236,7 +244,6 @@ export default function ChallengeDetailScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   content: {
     padding: 20,
@@ -254,16 +261,13 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 18,
-    color: '#64748b',
     marginBottom: 16,
   },
   backButton: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: '#3b82f6',
   },
   backButtonText: {
-    color: '#fff',
     fontWeight: '600',
   },
   header: {
@@ -277,7 +281,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   categoryText: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -294,12 +297,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
     marginBottom: 8,
   },
   description: {
     fontSize: 16,
-    color: '#64748b',
     lineHeight: 24,
     marginBottom: 24,
   },
@@ -311,13 +312,10 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: '#3b82f6',
     marginBottom: 16,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -326,26 +324,21 @@ const styles = StyleSheet.create({
   timerText: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#1e293b',
   },
   timerLabel: {
     fontSize: 14,
-    color: '#64748b',
   },
   progressBarContainer: {
     width: '100%',
     height: 8,
-    backgroundColor: '#e2e8f0',
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#3b82f6',
     borderRadius: 4,
   },
   instructionsCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -353,16 +346,13 @@ const styles = StyleSheet.create({
   instructionsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
     marginBottom: 8,
   },
   instructionsText: {
     fontSize: 14,
-    color: '#64748b',
     lineHeight: 22,
   },
   pointsCard: {
-    backgroundColor: '#ecfdf5',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -372,26 +362,21 @@ const styles = StyleSheet.create({
   },
   pointsLabel: {
     fontSize: 14,
-    color: '#059669',
   },
   pointsValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#059669',
   },
   startButton: {
-    backgroundColor: '#3b82f6',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
   },
   startButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
   },
   completeButton: {
-    backgroundColor: '#22c55e',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
@@ -400,7 +385,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   completeButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
   },
@@ -409,7 +393,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#f8fafc',
   },
   completeIcon: {
     fontSize: 64,
@@ -418,29 +401,24 @@ const styles = StyleSheet.create({
   completeTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1e293b',
     marginBottom: 8,
   },
   completePoints: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#22c55e',
     marginBottom: 16,
   },
   completeMessage: {
     fontSize: 16,
-    color: '#64748b',
     textAlign: 'center',
     marginBottom: 32,
   },
   doneButton: {
-    backgroundColor: '#3b82f6',
     borderRadius: 12,
     padding: 16,
     paddingHorizontal: 48,
   },
   doneButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },

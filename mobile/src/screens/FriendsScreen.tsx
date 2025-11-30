@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function FriendsScreen() {
   const [friends, setFriends] = useState<any[]>([]);
@@ -16,6 +17,7 @@ export default function FriendsScreen() {
   const [friendEmail, setFriendEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const { colors, isDark } = useTheme();
 
   useEffect(() => {
     loadFriends();
@@ -43,35 +45,35 @@ export default function FriendsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.addFriendCard}>
-        <Text style={styles.addFriendTitle}>Add a Friend</Text>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
+      <View style={[styles.addFriendCard, { backgroundColor: colors.cardBackground, shadowColor: colors.cardShadow }]}>
+        <Text style={[styles.addFriendTitle, { color: colors.text }]}>Add a Friend</Text>
         <View style={styles.inputRow}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.inputBackground, color: colors.inputText }]}
             placeholder="Enter email address"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor={colors.inputPlaceholder}
             value={friendEmail}
             onChangeText={setFriendEmail}
             keyboardType="email-address"
             autoCapitalize="none"
           />
           <TouchableOpacity
-            style={[styles.sendButton, sending && styles.buttonDisabled]}
+            style={[styles.sendButton, { backgroundColor: colors.primary }, sending && styles.buttonDisabled]}
             onPress={handleSendRequest}
             disabled={sending}
           >
             {sending ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={colors.textInverse} size="small" />
             ) : (
-              <Text style={styles.sendButtonText}>Send</Text>
+              <Text style={[styles.sendButtonText, { color: colors.textInverse }]}>Send</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -79,28 +81,28 @@ export default function FriendsScreen() {
 
       {pendingRequests.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
             Pending Requests ({pendingRequests.length})
           </Text>
           {pendingRequests.map((request: any) => (
-            <View key={request.id} style={styles.friendCard}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
+            <View key={request.id} style={[styles.friendCard, { backgroundColor: colors.cardBackground }]}>
+              <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.avatarText, { color: colors.textInverse }]}>
                   {request.firstName?.[0] || "?"}
                 </Text>
               </View>
               <View style={styles.friendInfo}>
-                <Text style={styles.friendName}>
+                <Text style={[styles.friendName, { color: colors.text }]}>
                   {request.firstName} {request.lastName}
                 </Text>
-                <Text style={styles.friendEmail}>{request.email}</Text>
+                <Text style={[styles.friendEmail, { color: colors.textSecondary }]}>{request.email}</Text>
               </View>
               <View style={styles.requestActions}>
-                <TouchableOpacity style={styles.acceptButton}>
-                  <Text style={styles.acceptText}>✓</Text>
+                <TouchableOpacity style={[styles.acceptButton, { backgroundColor: colors.success }]}>
+                  <Text style={[styles.acceptText, { color: colors.textInverse }]}>✓</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.declineButton}>
-                  <Text style={styles.declineText}>✕</Text>
+                <TouchableOpacity style={[styles.declineButton, { backgroundColor: colors.error }]}>
+                  <Text style={[styles.declineText, { color: colors.textInverse }]}>✕</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -109,28 +111,28 @@ export default function FriendsScreen() {
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Friends ({friends.length})</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Your Friends ({friends.length})</Text>
         {friends.length === 0 ? (
-          <View style={styles.emptyContainer}>
+          <View style={[styles.emptyContainer, { backgroundColor: colors.cardBackground }]}>
             <Text style={styles.emptyIcon}>👥</Text>
-            <Text style={styles.emptyTitle}>No friends yet</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No friends yet</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               Send a friend request to get started!
             </Text>
           </View>
         ) : (
           friends.map((friend: any) => (
-            <View key={friend.id} style={styles.friendCard}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
+            <View key={friend.id} style={[styles.friendCard, { backgroundColor: colors.cardBackground }]}>
+              <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.avatarText, { color: colors.textInverse }]}>
                   {friend.firstName?.[0] || "?"}
                 </Text>
               </View>
               <View style={styles.friendInfo}>
-                <Text style={styles.friendName}>
+                <Text style={[styles.friendName, { color: colors.text }]}>
                   {friend.firstName} {friend.lastName}
                 </Text>
-                <Text style={styles.friendEmail}>{friend.email}</Text>
+                <Text style={[styles.friendEmail, { color: colors.textSecondary }]}>{friend.email}</Text>
               </View>
             </View>
           ))
@@ -143,7 +145,6 @@ export default function FriendsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
   },
   content: {
     padding: 20,
@@ -156,15 +157,12 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#1e293b",
     marginBottom: 24,
   },
   addFriendCard: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -173,7 +171,6 @@ const styles = StyleSheet.create({
   addFriendTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1e293b",
     marginBottom: 12,
   },
   inputRow: {
@@ -182,14 +179,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: "#f1f5f9",
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
-    color: "#1e293b",
   },
   sendButton: {
-    backgroundColor: "#3b82f6",
     borderRadius: 12,
     paddingHorizontal: 20,
     justifyContent: "center",
@@ -198,7 +192,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   sendButtonText: {
-    color: "#fff",
     fontWeight: "600",
   },
   section: {
@@ -207,13 +200,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1e293b",
     marginBottom: 16,
   },
   friendCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
@@ -222,7 +213,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#3b82f6",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -230,7 +220,6 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#fff",
     textTransform: "uppercase",
   },
   friendInfo: {
@@ -239,11 +228,9 @@ const styles = StyleSheet.create({
   friendName: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#1e293b",
   },
   friendEmail: {
     fontSize: 14,
-    color: "#64748b",
     marginTop: 2,
   },
   requestActions: {
@@ -254,12 +241,10 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#22c55e",
     justifyContent: "center",
     alignItems: "center",
   },
   acceptText: {
-    color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -267,19 +252,16 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#ef4444",
     justifyContent: "center",
     alignItems: "center",
   },
   declineText: {
-    color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
   },
   emptyContainer: {
     alignItems: "center",
     paddingVertical: 48,
-    backgroundColor: "#fff",
     borderRadius: 12,
   },
   emptyIcon: {
@@ -289,11 +271,9 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#1e293b",
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: "#64748b",
   },
 });

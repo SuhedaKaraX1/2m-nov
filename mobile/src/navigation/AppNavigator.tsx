@@ -1,10 +1,11 @@
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import {
   createDrawerNavigator,
   DrawerContentScrollView,
 } from "@react-navigation/drawer";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import {
   View,
   ActivityIndicator,
@@ -52,17 +53,20 @@ const createItems = [
 ];
 
 function HamburgerButton({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+  
   return (
     <TouchableOpacity onPress={onPress} style={styles.hamburgerButton}>
-      <View style={styles.hamburgerLine} />
-      <View style={styles.hamburgerLine} />
-      <View style={styles.hamburgerLine} />
+      <View style={[styles.hamburgerLine, { backgroundColor: colors.text }]} />
+      <View style={[styles.hamburgerLine, { backgroundColor: colors.text }]} />
+      <View style={[styles.hamburgerLine, { backgroundColor: colors.text }]} />
     </TouchableOpacity>
   );
 }
 
 function CustomDrawerContent(props: any) {
   const { navigation, state } = props;
+  const { colors, isDark } = useTheme();
   const currentRoute = state?.routes?.[state.index]?.name || "Home";
 
   const getNavigationIconSource = (name: string) => {
@@ -98,33 +102,34 @@ function CustomDrawerContent(props: any) {
   };
 
   return (
-    <DrawerContentScrollView {...props} style={styles.drawerContent}>
+    <DrawerContentScrollView {...props} style={[styles.drawerContent, { backgroundColor: colors.background }]}>
       <View style={styles.drawerHeader}>
         <View style={styles.logoContainer}>
           <Image source={Logo} style={styles.logoIcon} />
         </View>
-        <Text style={styles.drawerTitle}>2Mins Challenge</Text>
+        <Text style={[styles.drawerTitle, { color: colors.text }]}>2Mins Challenge</Text>
       </View>
 
       <View style={styles.sectionContainer}>
-        <Text style={styles.sectionLabel}>NAVIGATION</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>NAVIGATION</Text>
         {navigationItems.map((item) => (
           <TouchableOpacity
             key={item.name}
             style={[
               styles.drawerItem,
-              currentRoute === item.name && styles.drawerItemActive,
+              currentRoute === item.name && [styles.drawerItemActive, { backgroundColor: colors.primaryLight }],
             ]}
             onPress={() => navigation.navigate(item.name)}
           >
             <Image
               source={getNavigationIconSource(item.name)}
-              style={styles.drawerItemImage}
+              style={[styles.drawerItemImage, { tintColor: currentRoute === item.name ? colors.primary : colors.textSecondary }]}
             />
             <Text
               style={[
                 styles.drawerItemLabel,
-                currentRoute === item.name && styles.drawerItemLabelActive,
+                { color: colors.textSecondary },
+                currentRoute === item.name && [styles.drawerItemLabelActive, { color: colors.primary }],
               ]}
             >
               {item.label}
@@ -134,24 +139,25 @@ function CustomDrawerContent(props: any) {
       </View>
 
       <View style={styles.sectionContainer}>
-        <Text style={styles.sectionLabel}>Create</Text>
+        <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>Create</Text>
         {createItems.map((item) => (
           <TouchableOpacity
             key={item.name}
             style={[
               styles.drawerItem,
-              currentRoute === item.name && styles.drawerItemActive,
+              currentRoute === item.name && [styles.drawerItemActive, { backgroundColor: colors.primaryLight }],
             ]}
             onPress={() => navigation.navigate(item.name)}
           >
             <Image
               source={getCreateIconSource(item.name)}
-              style={styles.drawerItemImage}
+              style={[styles.drawerItemImage, { tintColor: currentRoute === item.name ? colors.primary : colors.textSecondary }]}
             />
             <Text
               style={[
                 styles.drawerItemLabel,
-                currentRoute === item.name && styles.drawerItemLabelActive,
+                { color: colors.textSecondary },
+                currentRoute === item.name && [styles.drawerItemLabelActive, { color: colors.primary }],
               ]}
             >
               {item.label}
@@ -164,27 +170,30 @@ function CustomDrawerContent(props: any) {
 }
 
 function DrawerScreens() {
+  const { colors, isDark } = useTheme();
+  
   return (
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={({ navigation }) => ({
         headerStyle: {
-          backgroundColor: "#fff",
+          backgroundColor: colors.headerBackground,
           elevation: 0,
           shadowOpacity: 0,
           borderBottomWidth: 1,
-          borderBottomColor: "#e2e8f0",
+          borderBottomColor: colors.border,
         },
         headerTitleStyle: {
-          color: "#1e293b",
+          color: colors.headerText,
           fontWeight: "600",
           fontSize: 18,
         },
+        headerTintColor: colors.text,
         headerLeft: () => (
           <HamburgerButton onPress={() => navigation.openDrawer()} />
         ),
         drawerStyle: {
-          backgroundColor: "#fff",
+          backgroundColor: colors.background,
           width: 280,
         },
       })}
@@ -239,6 +248,8 @@ function DrawerScreens() {
 }
 
 function MainStack() {
+  const { colors } = useTheme();
+  
   return (
     <Stack.Navigator>
       <Stack.Screen
@@ -252,12 +263,13 @@ function MainStack() {
         options={{
           title: "Challenge",
           headerStyle: {
-            backgroundColor: "#fff",
+            backgroundColor: colors.headerBackground,
           },
           headerTitleStyle: {
-            color: "#1e293b",
+            color: colors.headerText,
             fontWeight: "600",
           },
+          headerTintColor: colors.text,
           headerBackTitle: "Back",
         }}
       />
@@ -283,18 +295,32 @@ function OnboardingStack() {
 
 export default function AppNavigator() {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { colors, isDark } = useTheme();
+
+  const navigationTheme = {
+    ...(isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDark ? DarkTheme : DefaultTheme).colors,
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.cardBackground,
+      text: colors.text,
+      border: colors.border,
+      notification: colors.primary,
+    },
+  };
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000000" />
-        <Text style={styles.loadingText}>Loading...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading...</Text>
       </View>
     );
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       {!isAuthenticated ? (
         <AuthStack />
       ) : user?.onboardingCompleted === 0 ? (

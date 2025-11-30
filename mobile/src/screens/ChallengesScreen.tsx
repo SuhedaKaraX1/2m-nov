@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,27 +7,34 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-} from 'react-native';
-import { apiService } from '../services/api';
-import { Challenge, ChallengeCategory, categoryConfig, difficultyConfig } from '../types';
+} from "react-native";
+import { useTheme } from "../contexts/ThemeContext";
+import { apiService } from "../services/api";
+import {
+  Challenge,
+  ChallengeCategory,
+  categoryConfig,
+  difficultyConfig,
+} from "../types";
 
 export default function ChallengesScreen({ route, navigation }: any) {
+  const { colors, isDark } = useTheme();
   const initialCategory = route.params?.category;
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<ChallengeCategory | 'all'>(
-    initialCategory || 'all'
-  );
+  const [selectedCategory, setSelectedCategory] = useState<
+    ChallengeCategory | "all"
+  >(initialCategory || "all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadChallenges = async () => {
     try {
       const data = await apiService.getChallenges(
-        selectedCategory !== 'all' ? selectedCategory : undefined
+        selectedCategory !== "all" ? selectedCategory : undefined,
       );
       setChallenges(data || []);
     } catch (error) {
-      console.error('Failed to load challenges:', error);
+      console.error("Failed to load challenges:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -44,25 +51,25 @@ export default function ChallengesScreen({ route, navigation }: any) {
   };
 
   const handleChallengePress = (id: string) => {
-    navigation.navigate('ChallengeDetail', { id });
+    navigation.navigate("ChallengeDetail", { id });
   };
 
-  const categories = ['all', ...Object.keys(categoryConfig)] as const;
+  const categories = ["all", ...Object.keys(categoryConfig)] as const;
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
+        style={[styles.filterContainer, { backgroundColor: colors.cardBackground, borderBottomColor: colors.cardBorder }]}
         contentContainerStyle={styles.filterContent}
       >
         {categories.map((cat) => (
@@ -70,18 +77,22 @@ export default function ChallengesScreen({ route, navigation }: any) {
             key={cat}
             style={[
               styles.filterChip,
-              selectedCategory === cat && styles.filterChipSelected,
+              { backgroundColor: colors.backgroundSecondary },
+              selectedCategory === cat && { backgroundColor: colors.primary },
             ]}
-            onPress={() => setSelectedCategory(cat as ChallengeCategory | 'all')}
+            onPress={() =>
+              setSelectedCategory(cat as ChallengeCategory | "all")
+            }
           >
             <Text
               style={[
                 styles.filterChipText,
-                selectedCategory === cat && styles.filterChipTextSelected,
+                { color: colors.textSecondary },
+                selectedCategory === cat && { color: colors.textInverse },
               ]}
             >
-              {cat === 'all'
-                ? 'All'
+              {cat === "all"
+                ? "All"
                 : categoryConfig[cat as ChallengeCategory]?.label || cat}
             </Text>
           </TouchableOpacity>
@@ -92,14 +103,19 @@ export default function ChallengesScreen({ route, navigation }: any) {
         style={styles.list}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
         }
       >
         {challenges.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyTitle}>No challenges found</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No challenges found</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               Try selecting a different category
             </Text>
           </View>
@@ -107,7 +123,7 @@ export default function ChallengesScreen({ route, navigation }: any) {
           challenges.map((challenge) => (
             <TouchableOpacity
               key={challenge.id}
-              style={styles.challengeCard}
+              style={[styles.challengeCard, { backgroundColor: colors.cardBackground, shadowColor: colors.cardShadow }]}
               onPress={() => handleChallengePress(challenge.id)}
             >
               <View style={styles.challengeHeader}>
@@ -117,11 +133,11 @@ export default function ChallengesScreen({ route, navigation }: any) {
                     {
                       backgroundColor:
                         categoryConfig[challenge.category as ChallengeCategory]
-                          ?.color || '#3b82f6',
+                          ?.color || colors.primary,
                     },
                   ]}
                 />
-                <Text style={styles.challengeCategory}>
+                <Text style={[styles.challengeCategory, { color: colors.textSecondary }]}>
                   {categoryConfig[challenge.category as ChallengeCategory]
                     ?.label || challenge.category}
                 </Text>
@@ -130,8 +146,9 @@ export default function ChallengesScreen({ route, navigation }: any) {
                     styles.difficultyBadge,
                     {
                       backgroundColor:
-                        difficultyConfig[challenge.difficulty as keyof typeof difficultyConfig]
-                          ?.color + '20' || '#3b82f620',
+                        difficultyConfig[
+                          challenge.difficulty as keyof typeof difficultyConfig
+                        ]?.color + "20" || colors.primary + "20",
                     },
                   ]}
                 >
@@ -140,8 +157,9 @@ export default function ChallengesScreen({ route, navigation }: any) {
                       styles.difficultyText,
                       {
                         color:
-                          difficultyConfig[challenge.difficulty as keyof typeof difficultyConfig]
-                            ?.color || '#3b82f6',
+                          difficultyConfig[
+                            challenge.difficulty as keyof typeof difficultyConfig
+                          ]?.color || colors.primary,
                       },
                     ]}
                   >
@@ -149,13 +167,13 @@ export default function ChallengesScreen({ route, navigation }: any) {
                   </Text>
                 </View>
               </View>
-              <Text style={styles.challengeTitle}>{challenge.title}</Text>
-              <Text style={styles.challengeDescription} numberOfLines={2}>
+              <Text style={[styles.challengeTitle, { color: colors.text }]}>{challenge.title}</Text>
+              <Text style={[styles.challengeDescription, { color: colors.textSecondary }]} numberOfLines={2}>
                 {challenge.description}
               </Text>
               <View style={styles.challengeFooter}>
-                <Text style={styles.pointsText}>+{challenge.points} pts</Text>
-                <Text style={styles.startText}>Start →</Text>
+                <Text style={[styles.pointsText, { color: colors.success }]}>+{challenge.points} pts</Text>
+                <Text style={[styles.startText, { color: colors.primary }]}>Start →</Text>
               </View>
             </TouchableOpacity>
           ))
@@ -168,42 +186,33 @@ export default function ChallengesScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   filterContainer: {
-    maxHeight: 56,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    backgroundColor: '#fff',
+    maxHeight: 60,
   },
   filterContent: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 8,
-    flexDirection: 'row',
   },
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#f1f5f9',
     marginRight: 8,
-  },
-  filterChipSelected: {
-    backgroundColor: '#3b82f6',
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: 40,
   },
   filterChipText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#64748b',
-  },
-  filterChipTextSelected: {
-    color: '#fff',
+    fontWeight: "500",
   },
   list: {
     flex: 1,
@@ -213,7 +222,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 48,
   },
   emptyIcon: {
@@ -222,28 +231,24 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748b',
   },
   challengeCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
   challengeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
   categoryDot: {
@@ -254,7 +259,6 @@ const styles = StyleSheet.create({
   },
   challengeCategory: {
     fontSize: 12,
-    color: '#64748b',
     flex: 1,
   },
   difficultyBadge: {
@@ -264,34 +268,30 @@ const styles = StyleSheet.create({
   },
   difficultyText: {
     fontSize: 12,
-    fontWeight: '500',
-    textTransform: 'capitalize',
+    fontWeight: "500",
+    textTransform: "capitalize",
   },
   challengeTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontWeight: "600",
     marginBottom: 4,
   },
   challengeDescription: {
     fontSize: 14,
-    color: '#64748b',
     lineHeight: 20,
     marginBottom: 12,
   },
   challengeFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   pointsText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#22c55e',
+    fontWeight: "600",
   },
   startText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#3b82f6',
+    fontWeight: "500",
   },
 });

@@ -10,9 +10,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { ChallengeCategory, categoryConfig, ChallengeDifficulty, difficultyConfig } from '../types';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function CreateChallengeScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
+  const { colors, isDark } = useTheme();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -64,23 +66,23 @@ export default function CreateChallengeScreen({ navigation }: any) {
   const difficulties = Object.keys(difficultyConfig) as ChallengeDifficulty[];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.screenTitle}>Create Challenge</Text>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
+      <Text style={[styles.screenTitle, { color: colors.text }]}>Create Challenge</Text>
 
-      <Text style={styles.label}>Title</Text>
+      <Text style={[styles.label, { color: colors.text }]}>Title</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
         placeholder="Enter challenge title"
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={colors.inputPlaceholder}
         value={formData.title}
         onChangeText={(text) => updateField('title', text)}
       />
 
-      <Text style={styles.label}>Description</Text>
+      <Text style={[styles.label, { color: colors.text }]}>Description</Text>
       <TextInput
-        style={[styles.input, styles.textArea]}
+        style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
         placeholder="Describe what this challenge is about"
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={colors.inputPlaceholder}
         value={formData.description}
         onChangeText={(text) => updateField('description', text)}
         multiline
@@ -88,13 +90,14 @@ export default function CreateChallengeScreen({ navigation }: any) {
         textAlignVertical="top"
       />
 
-      <Text style={styles.label}>Category</Text>
+      <Text style={[styles.label, { color: colors.text }]}>Category</Text>
       <View style={styles.optionsRow}>
         {categories.map((cat) => (
           <TouchableOpacity
             key={cat}
             style={[
               styles.optionButton,
+              { borderColor: colors.inputBorder, backgroundColor: colors.cardBackground },
               formData.category === cat && {
                 borderColor: categoryConfig[cat].color,
                 backgroundColor: categoryConfig[cat].color + '20',
@@ -105,6 +108,7 @@ export default function CreateChallengeScreen({ navigation }: any) {
             <Text
               style={[
                 styles.optionText,
+                { color: colors.textSecondary },
                 formData.category === cat && { color: categoryConfig[cat].color },
               ]}
             >
@@ -114,13 +118,14 @@ export default function CreateChallengeScreen({ navigation }: any) {
         ))}
       </View>
 
-      <Text style={styles.label}>Difficulty</Text>
+      <Text style={[styles.label, { color: colors.text }]}>Difficulty</Text>
       <View style={styles.difficultyRow}>
         {difficulties.map((diff) => (
           <TouchableOpacity
             key={diff}
             style={[
               styles.difficultyButton,
+              { borderColor: colors.inputBorder, backgroundColor: colors.cardBackground },
               formData.difficulty === diff && {
                 borderColor: difficultyConfig[diff].color,
                 backgroundColor: difficultyConfig[diff].color + '20',
@@ -131,6 +136,7 @@ export default function CreateChallengeScreen({ navigation }: any) {
             <Text
               style={[
                 styles.difficultyText,
+                { color: colors.textSecondary },
                 formData.difficulty === diff && {
                   color: difficultyConfig[diff].color,
                 },
@@ -142,11 +148,11 @@ export default function CreateChallengeScreen({ navigation }: any) {
         ))}
       </View>
 
-      <Text style={styles.label}>Instructions</Text>
+      <Text style={[styles.label, { color: colors.text }]}>Instructions</Text>
       <TextInput
-        style={[styles.input, styles.textArea]}
+        style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
         placeholder="Step-by-step instructions for completing this challenge"
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={colors.inputPlaceholder}
         value={formData.instructions}
         onChangeText={(text) => updateField('instructions', text)}
         multiline
@@ -154,25 +160,25 @@ export default function CreateChallengeScreen({ navigation }: any) {
         textAlignVertical="top"
       />
 
-      <Text style={styles.label}>Points</Text>
+      <Text style={[styles.label, { color: colors.text }]}>Points</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
         placeholder="10"
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={colors.inputPlaceholder}
         value={formData.points}
         onChangeText={(text) => updateField('points', text)}
         keyboardType="numeric"
       />
 
       <TouchableOpacity
-        style={[styles.submitButton, loading && styles.buttonDisabled]}
+        style={[styles.submitButton, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
         onPress={handleSubmit}
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.textInverse} />
         ) : (
-          <Text style={styles.submitButtonText}>Create Challenge</Text>
+          <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>Create Challenge</Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -182,7 +188,6 @@ export default function CreateChallengeScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   content: {
     padding: 20,
@@ -191,24 +196,19 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1e293b',
     marginBottom: 24,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#1e293b',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   textArea: {
     minHeight: 100,
@@ -224,13 +224,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#fff',
   },
   optionText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748b',
   },
   difficultyRow: {
     flexDirection: 'row',
@@ -242,17 +239,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#fff',
     alignItems: 'center',
   },
   difficultyText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748b',
   },
   submitButton: {
-    backgroundColor: '#3b82f6',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
@@ -262,7 +255,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   submitButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
   },

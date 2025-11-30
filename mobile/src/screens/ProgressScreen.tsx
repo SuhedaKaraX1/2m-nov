@@ -9,7 +9,9 @@ import {
   Dimensions,
   Image,
   TouchableOpacity,
+  useWindowDimensions,
 } from "react-native";
+import { useTheme } from "../contexts/ThemeContext";
 import { apiService } from "../services/api";
 import {
   UserProgress,
@@ -18,9 +20,9 @@ import {
   categoryConfig,
   ChallengeCategory,
 } from "../types";
-import Svg, { Polyline, Circle } from "react-native-svg";
+import Svg, { Polyline, Circle, Path } from "react-native-svg";
 
-const { width } = Dimensions.get("window");
+const { width: INITIAL_WIDTH } = Dimensions.get("window");
 
 const tierColors: Record<string, string> = {
   bronze: "#cd7f32",
@@ -29,7 +31,6 @@ const tierColors: Record<string, string> = {
   platinum: "#22d3ee",
 };
 
-// assets klasöründeki kategori ikonları
 const getCategoryIconSource = (category: string) => {
   switch (category) {
     case "physical":
@@ -51,7 +52,6 @@ const getCategoryIconSource = (category: string) => {
 
 type AnalyticsTab = "daily" | "trends" | "categories";
 
-/** Helpers for pie chart */
 const polarToCartesian = (
   centerX: number,
   centerY: number,
@@ -86,6 +86,7 @@ const describeArc = (
 };
 
 export default function ProgressScreen() {
+  const { colors, isDark } = useTheme();
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [achievements, setAchievements] = useState<AchievementWithProgress[]>(
     [],
@@ -94,6 +95,11 @@ export default function ProgressScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [analyticsTab, setAnalyticsTab] = useState<AnalyticsTab>("daily");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmallScreen = screenWidth < 380;
+  const isMediumScreen = screenWidth < 768;
 
   const loadData = async () => {
     try {
@@ -122,7 +128,6 @@ export default function ProgressScreen() {
     loadData();
   };
 
-  // --- Achievements helpers ---
   const unlockedAchievements = achievements.filter((a) => a.unlocked);
   const lockedAchievements = achievements.filter((a) => !a.unlocked);
   const overallAchievementProgress =
@@ -130,12 +135,10 @@ export default function ProgressScreen() {
       ? Math.round((unlockedAchievements.length / achievements.length) * 100)
       : 0;
 
-  // --- Analytics: last 30 days aggregates ---
   const last30DaysData = useMemo(() => {
     const days: {
       date: Date;
-      label: string; // x-ekseni için kısa gün label'ı (2, 4, 6...)
-      fullLabel: string; // istersen tooltip vs için tam tarih
+      label: string;
       count: number;
       points: number;
     }[] = [];
@@ -145,13 +148,8 @@ export default function ProgressScreen() {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
 
-      const label = d.getDate().toString(); // SADECE GÜN
-      const fullLabel = d.toLocaleDateString(undefined, {
-        day: "numeric",
-        month: "short",
-      });
-
-      days.push({ date: d, label, fullLabel, count: 0, points: 0 });
+      const label = d.getDate().toString();
+      days.push({ date: d, label, count: 0, points: 0 });
     }
 
     history.forEach((h) => {
@@ -172,21 +170,26 @@ export default function ProgressScreen() {
     return days;
   }, [history]);
 
-  
+  const maxDailyCount = Math.max(0, ...last30DaysData.map((d) => d.count || 0));
+  const maxDailyPoints = Math.max(
+    0,
+    ...last30DaysData.map((d) => d.points || 0),
+  );
 
-  // Y-ticks for Daily Activity (0,2,4,...)
-  // --- Daily charts Y axis ticks ---
+  const dailyYAxisTicks = useMemo(() => {
+    const top = Math.max(2, Math.ceil(maxDailyCount / 2) * 2);
+    const ticks: number[] = [];
+    for (let v = 0; v <= top; v += 2) ticks.push(v);
+    return ticks;
+  }, [maxDailyCount]);
 
-  // Daily grafikleri için sabit eksen değerleri (web ile aynı)
-  const DAILY_MAX_Y = 8;
-  const POINTS_MAX_Y = 60;
+  const pointsYAxisTicks = useMemo(() => {
+    const topRaw = Math.max(10, Math.ceil(maxDailyPoints / 10) * 10);
+    const ticks: number[] = [];
+    for (let v = 0; v <= topRaw; v += 10) ticks.push(v);
+    return ticks;
+  }, [maxDailyPoints]);
 
-  const dailyYAxisTicks = [0, 2, 4, 6, 8];
-
-  const pointsYAxisTicks = [0, 10, 20, 30, 40, 50, 60];
-
-
-  // --- Weekly trend: last 12 weeks ---
   const weeklyTrendData = useMemo(() => {
     const weeks: {
       start: Date;
@@ -196,8 +199,7 @@ export default function ProgressScreen() {
       points: number;
     }[] = [];
     const today = new Date();
-    // Hafta başlangıcı: pazartesi kabul edelim
-    const todayDay = (today.getDay() + 6) % 7; // 0: Pazartesi
+    const todayDay = (today.getDay() + 6) % 7;
     const currentWeekStart = new Date(
       today.getFullYear(),
       today.getMonth(),
@@ -228,15 +230,14 @@ export default function ProgressScreen() {
   }, [history]);
 
   const maxWeeklyChallenges = Math.max(
-    1,
+    0,
     ...weeklyTrendData.map((w) => w.challenges || 0),
   );
   const maxWeeklyPoints = Math.max(
-    1,
+    0,
     ...weeklyTrendData.map((w) => w.points || 0),
   );
 
-  // --- Monthly trend: last 12 months ---
   const monthlyTrendData = useMemo(() => {
     const months: {
       year: number;
@@ -270,15 +271,14 @@ export default function ProgressScreen() {
   }, [history]);
 
   const maxMonthlyChallenges = Math.max(
-    1,
+    0,
     ...monthlyTrendData.map((m) => m.challenges || 0),
   );
   const maxMonthlyPoints = Math.max(
-    1,
+    0,
     ...monthlyTrendData.map((m) => m.points || 0),
   );
 
-  // Analytics – categories distribution (last 30 days)
   const categoryStats = useMemo(() => {
     const stats: Record<string, number> = {};
     history.forEach((h) => {
@@ -298,132 +298,139 @@ export default function ProgressScreen() {
     0,
   );
 
-  // Challenge history tap → expanded item
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={[
+        styles.content,
+        isSmallScreen && styles.contentSmallPadding,
+      ]}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
       }
       showsVerticalScrollIndicator={false}
     >
-      {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Progress</Text>
-        <Text style={styles.screenSubtitle}>
+        <Text
+          style={[styles.screenTitle, { color: colors.text }, isSmallScreen && styles.screenTitleSmall]}
+        >
+          Progress
+        </Text>
+        <Text style={[styles.screenSubtitle, { color: colors.textSecondary }]}>
           Track your journey and celebrate your achievements
         </Text>
       </View>
 
-      {/* OVERVIEW TOP CARDS */}
       <View style={styles.topStatsRow}>
-        {/* Current Streak */}
-        <View style={styles.topStatCard}>
+        <View
+          style={[
+            styles.topStatCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+            (isSmallScreen || isMediumScreen) && styles.topStatCardCompact,
+          ]}
+        >
           <View style={styles.topStatIconRow}>
-            <View
-              style={[
-                styles.topStatIconContainer,
-                { backgroundColor: "#fee2e2" },
-              ]}
-            >
+            <View>
               <Image
-                source={require("../../assets/alarm.png")}
+                source={require("../../assets/fire.png")}
                 style={styles.topStatIcon}
               />
             </View>
           </View>
-          <Text style={styles.topStatLabel}>Current Streak</Text>
-          <Text style={styles.topStatValue}>
+          <Text style={[styles.topStatLabel, { color: colors.textSecondary }]}>Current Streak</Text>
+          <Text style={[styles.topStatValue, { color: colors.text }]}>
             {progress?.currentStreak || 0}{" "}
             <Text style={styles.topStatValueSuffix}>days</Text>
           </Text>
-          <Text style={styles.topStatHint}>
+          <Text style={[styles.topStatHint, { color: colors.textMuted }]}>
             Consecutive days with challenges
           </Text>
         </View>
 
-        {/* Total Points */}
-        <View style={styles.topStatCard}>
+        <View
+          style={[
+            styles.topStatCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+            (isSmallScreen || isMediumScreen) && styles.topStatCardCompact,
+          ]}
+        >
           <View style={styles.topStatIconRow}>
-            <View
-              style={[
-                styles.topStatIconContainer,
-                { backgroundColor: "#fef3c7" },
-              ]}
-            >
+            <View>
               <Image
-                source={require("../../assets/progress.png")}
+                source={require("../../assets/trophy.png")}
                 style={styles.topStatIcon}
               />
             </View>
           </View>
-          <Text style={styles.topStatLabel}>Total Points</Text>
-          <Text style={styles.topStatValue}>{progress?.totalPoints || 0}</Text>
-          <Text style={styles.topStatHint}>All-time points earned</Text>
+          <Text style={[styles.topStatLabel, { color: colors.textSecondary }]}>Total Points</Text>
+          <Text style={[styles.topStatValue, { color: colors.text }]}>{progress?.totalPoints || 0}</Text>
+          <Text style={[styles.topStatHint, { color: colors.textMuted }]}>All-time points earned</Text>
         </View>
 
-        {/* Challenges Completed */}
-        <View style={styles.topStatCardLast}>
+        <View
+          style={[
+            styles.topStatCardLast,
+            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+            (isSmallScreen || isMediumScreen) && styles.topStatCardCompact,
+          ]}
+        >
           <View style={styles.topStatIconRow}>
-            <View
-              style={[
-                styles.topStatIconContainer,
-                { backgroundColor: "#dbeafe" },
-              ]}
-            >
+            <View>
               <Image
-                source={require("../../assets/nocolorbullseye.png")}
+                source={require("../../assets/bullseye.png")}
                 style={styles.topStatIcon}
               />
             </View>
           </View>
-          <Text style={styles.topStatLabel}>Challenges Completed</Text>
-          <Text style={styles.topStatValue}>
+          <Text style={[styles.topStatLabel, { color: colors.textSecondary }]}>Challenges Completed</Text>
+          <Text style={[styles.topStatValue, { color: colors.text }]}>
             {progress?.totalChallengesCompleted || 0}
           </Text>
-          <Text style={styles.topStatHint}>Total challenges finished</Text>
+          <Text style={[styles.topStatHint, { color: colors.textMuted }]}>Total challenges finished</Text>
         </View>
       </View>
 
-      {/* PERSONAL BEST + ACTIVITY SUMMARY */}
       <View style={styles.middleRow}>
-        <View style={styles.largeCard}>
-          <Text style={styles.largeCardTitle}>Personal Best</Text>
+        <View
+          style={[
+            styles.largeCard,
+            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+            (isSmallScreen || isMediumScreen) && styles.largeCardCompact,
+          ]}
+        >
+          <Text style={[styles.largeCardTitle, { color: colors.text }]}>Personal Best</Text>
           <View style={styles.largeCardRow}>
             <View style={styles.largeCardIconRow}>
-              <View
-                style={[
-                  styles.largeCardIconContainer,
-                  { backgroundColor: "#dcfce7" },
-                ]}
-              >
+              <View>
                 <Image
-                  source={require("../../assets/progress.png")}
+                  source={require("../../assets/trophy.png")}
                   style={styles.largeCardIcon}
                 />
               </View>
               <View>
-                <Text style={styles.largeCardLabel}>Longest Streak</Text>
-                <Text style={styles.largeCardValue}>
+                <Text style={[styles.largeCardLabel, { color: colors.textSecondary }]}>Longest Streak</Text>
+                <Text style={[styles.largeCardValue, { color: colors.text }]}>
                   {progress?.longestStreak || 0} days
                 </Text>
               </View>
             </View>
           </View>
           <View style={styles.largeCardRow}>
-            <Text style={styles.largeCardLabel}>Avg. Points Per Challenge</Text>
-            <Text style={styles.largeCardValue}>
+            <Text style={[styles.largeCardLabel, { color: colors.textSecondary }]}>Avg. Points Per Challenge</Text>
+            <Text style={[styles.largeCardValue, { color: colors.text }]}>
               {progress?.averagePointsPerChallenge
                 ? Math.round(progress.averagePointsPerChallenge)
                 : 0}
@@ -431,32 +438,33 @@ export default function ProgressScreen() {
           </View>
         </View>
 
-        <View style={styles.largeCardLast}>
-          <Text style={styles.largeCardTitle}>Activity Summary</Text>
+        <View
+          style={[
+            styles.largeCardLast,
+            { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+            (isSmallScreen || isMediumScreen) && styles.largeCardCompact,
+          ]}
+        >
+          <Text style={[styles.largeCardTitle, { color: colors.text }]}>Activity Summary</Text>
           <View style={styles.largeCardRow}>
             <View style={styles.largeCardIconRow}>
-              <View
-                style={[
-                  styles.largeCardIconContainer,
-                  { backgroundColor: "#e0f2fe" },
-                ]}
-              >
+              <View>
                 <Image
-                  source={require("../../assets/home.png")}
+                  source={require("../../assets/extreme.png")}
                   style={styles.largeCardIcon}
                 />
               </View>
               <View>
-                <Text style={styles.largeCardLabel}>Total Challenges</Text>
-                <Text style={styles.largeCardValue}>
+                <Text style={[styles.largeCardLabel, { color: colors.textSecondary }]}>Total Challenges</Text>
+                <Text style={[styles.largeCardValue, { color: colors.text }]}>
                   {progress?.totalChallengesCompleted || 0}
                 </Text>
               </View>
             </View>
           </View>
           <View style={styles.largeCardRow}>
-            <Text style={styles.largeCardLabel}>Last Completed</Text>
-            <Text style={styles.largeCardValue}>
+            <Text style={[styles.largeCardLabel, { color: colors.textSecondary }]}>Last Completed</Text>
+            <Text style={[styles.largeCardValue, { color: colors.text }]}>
               {history[0]?.completedAt
                 ? new Date(history[0].completedAt).toLocaleDateString()
                 : "-"}
@@ -465,40 +473,37 @@ export default function ProgressScreen() {
         </View>
       </View>
 
-      {/* ACHIEVEMENTS */}
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Achievements</Text>
-          <Text style={styles.sectionSubText}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Achievements</Text>
+          <Text style={[styles.sectionSubText, { color: colors.textSecondary }]}>
             {unlockedAchievements.length} of {achievements.length} unlocked
           </Text>
         </View>
 
-        {/* Overall progress bar */}
-        <View style={styles.overallProgressCard}>
+        <View style={[styles.overallProgressCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
           <View style={styles.overallHeaderRow}>
-            <Text style={styles.overallTitle}>Overall Progress</Text>
-            <Text style={styles.overallPercent}>
+            <Text style={[styles.overallTitle, { color: colors.text }]}>Overall Progress</Text>
+            <Text style={[styles.overallPercent, { color: colors.primary }]}>
               {overallAchievementProgress}%
             </Text>
           </View>
-          <Text style={styles.overallHint}>
+          <Text style={[styles.overallHint, { color: colors.textSecondary }]}>
             Keep completing challenges to unlock more achievements
           </Text>
-          <View style={styles.progressBarContainer}>
+          <View style={[styles.progressBarContainer, { backgroundColor: colors.progressBackground }]}>
             <View
               style={[
                 styles.progressBar,
-                { width: `${overallAchievementProgress}%` },
+                { width: `${overallAchievementProgress}%`, backgroundColor: colors.primary },
               ]}
             />
           </View>
         </View>
 
-        {/* Unlocked */}
-        <Text style={styles.subSectionTitle}>Unlocked</Text>
+        <Text style={[styles.subSectionTitle, { color: colors.text }]}>Unlocked</Text>
         {unlockedAchievements.length === 0 ? (
-          <Text style={styles.emptyTextSmall}>
+          <Text style={[styles.emptyTextSmall, { color: colors.textMuted }]}>
             You haven't unlocked any achievements yet.
           </Text>
         ) : (
@@ -513,21 +518,22 @@ export default function ProgressScreen() {
                 style={[
                   styles.achievementCard,
                   {
-                    borderColor: tierColors[a.tier] || "#e2e8f0",
-                    backgroundColor: "rgba(148,163,184,0.08)",
+                    borderColor: tierColors[a.tier] || colors.cardBorder,
+                    backgroundColor: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(148,163,184,0.08)',
+                    width: screenWidth * 0.8,
                   },
                 ]}
               >
-                <View style={styles.achievementIconCircle}>
+                <View style={[styles.achievementIconCircle, { backgroundColor: colors.backgroundSecondary }]}>
                   <Text style={styles.achievementIconText}>🏅</Text>
                 </View>
                 <View style={styles.achievementTextBlock}>
-                  <Text style={styles.achievementName}>{a.name}</Text>
-                  <Text style={styles.achievementDesc}>{a.description}</Text>
+                  <Text style={[styles.achievementName, { color: colors.text }]}>{a.name}</Text>
+                  <Text style={[styles.achievementDesc, { color: colors.textSecondary }]}>{a.description}</Text>
                   <Text
                     style={[
                       styles.achievementTierBadge,
-                      { color: tierColors[a.tier] || "#64748b" },
+                      { color: tierColors[a.tier] || colors.textSecondary },
                     ]}
                   >
                     {a.tier.charAt(0).toUpperCase() + a.tier.slice(1)}
@@ -538,37 +544,45 @@ export default function ProgressScreen() {
           </ScrollView>
         )}
 
-        {/* Locked */}
         {lockedAchievements.length > 0 && (
           <>
-            <Text style={[styles.subSectionTitle, { marginTop: 20 }]}>
+            <Text style={[styles.subSectionTitle, { marginTop: 20, color: colors.text }]}>
               Locked
             </Text>
             <View style={styles.lockedGrid}>
               {lockedAchievements.map((a) => (
-                <View key={a.id} style={styles.lockedAchievementCard}>
+                <View
+                  key={a.id}
+                  style={[
+                    styles.lockedAchievementCard,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                    (isSmallScreen || isMediumScreen) && {
+                      width: (screenWidth - 52) / 2,
+                    },
+                  ]}
+                >
                   <View style={styles.lockedHeaderRow}>
-                    <View style={styles.lockedIconCircle}>
+                    <View style={[styles.lockedIconCircle, { backgroundColor: colors.backgroundSecondary }]}>
                       <Text style={styles.lockedIconText}>🔒</Text>
                     </View>
-                    <Text style={styles.lockedTierLabel}>
+                    <Text style={[styles.lockedTierLabel, { color: colors.textMuted }]}>
                       {a.tier.charAt(0).toUpperCase() + a.tier.slice(1)}
                     </Text>
                   </View>
-                  <Text style={styles.lockedAchievementName}>{a.name}</Text>
-                  <Text style={styles.lockedAchievementDesc}>
+                  <Text style={[styles.lockedAchievementName, { color: colors.text }]}>{a.name}</Text>
+                  <Text style={[styles.lockedAchievementDesc, { color: colors.textSecondary }]}>
                     {a.description}
                   </Text>
-                  <Text style={styles.progressLabel}>Progress</Text>
-                  <View style={styles.progressBarContainerMini}>
+                  <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Progress</Text>
+                  <View style={[styles.progressBarContainerMini, { backgroundColor: colors.progressBackground }]}>
                     <View
                       style={[
                         styles.progressBarMini,
-                        { width: `${a.progressPercent || 0}%` },
+                        { width: `${a.progressPercent || 0}%`, backgroundColor: colors.primary },
                       ]}
                     />
                   </View>
-                  <Text style={styles.progressMiniText}>
+                  <Text style={[styles.progressMiniText, { color: colors.textSecondary }]}>
                     {a.progress}/{a.requirementValue}
                   </Text>
                 </View>
@@ -578,21 +592,25 @@ export default function ProgressScreen() {
         )}
       </View>
 
-      {/* ANALYTICS */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Analytics</Text>
-        <Text style={styles.sectionSubText}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Analytics</Text>
+        <Text style={[styles.sectionSubText, { color: colors.textSecondary }]}>
           Track your progress and insights over time
         </Text>
 
-        {/* Analytics summary cards */}
         <View style={styles.analyticsSummaryRow}>
-          <View style={styles.analyticsSummaryCard}>
+          <View
+            style={[
+              styles.analyticsSummaryCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+              (isSmallScreen || isMediumScreen) && styles.analyticsCardCompact,
+            ]}
+          >
             <View style={styles.analyticsSummaryHeaderRow}>
               <View
                 style={[
                   styles.analyticsSummaryIconContainer,
-                  { backgroundColor: "#e0f2fe" },
+                  { backgroundColor: colors.infoLight },
                 ]}
               >
                 <Image
@@ -601,21 +619,27 @@ export default function ProgressScreen() {
                 />
               </View>
             </View>
-            <Text style={styles.analyticsSummaryLabel}>Total Challenges</Text>
-            <Text style={styles.analyticsSummaryValue}>
+            <Text style={[styles.analyticsSummaryLabel, { color: colors.textSecondary }]}>Total Challenges</Text>
+            <Text style={[styles.analyticsSummaryValue, { color: colors.text }]}>
               {progress?.totalChallengesCompleted || 0}
             </Text>
-            <Text style={styles.analyticsSummaryHint}>
+            <Text style={[styles.analyticsSummaryHint, { color: colors.textMuted }]}>
               Completed challenges
             </Text>
           </View>
 
-          <View style={styles.analyticsSummaryCard}>
+          <View
+            style={[
+              styles.analyticsSummaryCard,
+              { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+              (isSmallScreen || isMediumScreen) && styles.analyticsCardCompact,
+            ]}
+          >
             <View style={styles.analyticsSummaryHeaderRow}>
               <View
                 style={[
                   styles.analyticsSummaryIconContainer,
-                  { backgroundColor: "#fef3c7" },
+                  { backgroundColor: colors.warningLight },
                 ]}
               >
                 <Image
@@ -624,21 +648,27 @@ export default function ProgressScreen() {
                 />
               </View>
             </View>
-            <Text style={styles.analyticsSummaryLabel}>Last 30 Days</Text>
-            <Text style={styles.analyticsSummaryValue}>
+            <Text style={[styles.analyticsSummaryLabel, { color: colors.textSecondary }]}>Last 30 Days</Text>
+            <Text style={[styles.analyticsSummaryValue, { color: colors.text }]}>
               {last30DaysData.reduce((acc, d) => acc + (d.count || 0), 0)}
             </Text>
-            <Text style={styles.analyticsSummaryHint}>
+            <Text style={[styles.analyticsSummaryHint, { color: colors.textMuted }]}>
               Challenges completed
             </Text>
           </View>
 
-          <View style={styles.analyticsSummaryCardLast}>
+          <View
+            style={[
+              styles.analyticsSummaryCardLast,
+              { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+              (isSmallScreen || isMediumScreen) && styles.analyticsCardCompact,
+            ]}
+          >
             <View style={styles.analyticsSummaryHeaderRow}>
               <View
                 style={[
                   styles.analyticsSummaryIconContainer,
-                  { backgroundColor: "#fee2e2" },
+                  { backgroundColor: colors.errorLight },
                 ]}
               >
                 <Image
@@ -647,190 +677,128 @@ export default function ProgressScreen() {
                 />
               </View>
             </View>
-            <Text style={styles.analyticsSummaryLabel}>Categories</Text>
-            <Text style={styles.analyticsSummaryValue}>
+            <Text style={[styles.analyticsSummaryLabel, { color: colors.textSecondary }]}>Categories</Text>
+            <Text style={[styles.analyticsSummaryValue, { color: colors.text }]}>
               {Object.keys(categoryStats).length}
             </Text>
-            <Text style={styles.analyticsSummaryHint}>Categories explored</Text>
+            <Text style={[styles.analyticsSummaryHint, { color: colors.textMuted }]}>Categories explored</Text>
           </View>
         </View>
 
-        {/* Analytics tabs */}
-        <View style={styles.tabsRow}>
+        <View style={[styles.tabsRow, { backgroundColor: colors.backgroundSecondary }]}>
           {(["daily", "trends", "categories"] as AnalyticsTab[]).map((tab) => (
             <TouchableOpacity
               key={tab}
               style={[
                 styles.tabButton,
-                analyticsTab === tab && styles.tabButtonActive,
+                analyticsTab === tab && { backgroundColor: colors.cardBackground },
               ]}
               onPress={() => setAnalyticsTab(tab)}
             >
               <Text
                 style={[
                   styles.tabText,
-                  analyticsTab === tab && styles.tabTextActive,
+                  { color: colors.textSecondary },
+                  analyticsTab === tab && { color: colors.text, fontWeight: "600" },
                 ]}
               >
-                {tab === "daily"
-                  ? "Daily"
-                  : tab === "trends"
-                    ? "Trends"
-                    : "Categories"}
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Tab contents */}
         {analyticsTab === "daily" && (
           <>
-            {/* DAILY ACTIVITY */}
-            <Text style={styles.analyticsChartTitle}>
-              Daily Activity (Last 30 Days)
+            <Text style={[styles.analyticsChartTitle, { color: colors.text }]}>Daily Activity</Text>
+            <Text style={[styles.analyticsChartSubtitle, { color: colors.textMuted }]}>
+              Challenges completed per day (last 30 days)
             </Text>
-            <Text style={styles.analyticsChartSubtitle}>
-              Number of challenges completed each day
-            </Text>
-
-            <View style={styles.chartContainer}>
+            <View style={[styles.chartContainer, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
               <View style={styles.chartRow}>
-                {/* Y Axis */}
                 <View style={styles.chartYAxis}>
-                  {dailyYAxisTicks
-                    .slice()
-                    .reverse()
-                    .map((v) => (
-                      <Text key={v} style={styles.chartYAxisLabel}>
-                        {v}
-                      </Text>
-                    ))}
+                  <Text style={[styles.chartYAxisLabel, { color: colors.textMuted }]}>
+                    {dailyYAxisTicks[dailyYAxisTicks.length - 1] || 0}
+                  </Text>
+                  <Text style={[styles.chartYAxisLabel, { color: colors.textMuted }]}>0</Text>
                 </View>
-
-                {/* Bars + X Axis */}
                 <View style={styles.chartMainArea}>
-                  {/* barlar */}
                   <View style={styles.chartBarsRow}>
                     {last30DaysData.map((d, idx) => {
-                      //const h = (d.count / maxDailyCount) * 100 || 2;
+                      const maxTick = dailyYAxisTicks[dailyYAxisTicks.length - 1] || 1;
+                      const ratio = maxTick > 0 ? d.count / maxTick : 0;
+                      const h = ratio * 100;
                       return (
                         <View key={idx} style={styles.chartBarGroup}>
-                          <View
-                            style={[
-                              styles.chartBar,
-                              //{ height: `${h}%`, backgroundColor: "#3b82f6" },
-                            ]}
-                          />
+                          {h > 0 && (
+                            <View
+                              style={[
+                                styles.chartBar,
+                                { height: `${h}%`, backgroundColor: colors.primary },
+                              ]}
+                            />
+                          )}
                         </View>
                       );
                     })}
                   </View>
-
-                  {/* alt çizgi */}
-                  <View style={styles.chartBottomAxis} />
-
-                  {/* tarih etiketleri */}
+                  <View style={[styles.chartBottomAxis, { backgroundColor: colors.border }]} />
                   <View style={styles.chartXAxis}>
-                    {last30DaysData.map((d, idx) => (
-                      <Text key={idx} style={styles.chartXAxisLabel}>
-                        {idx % 4 === 0 ? d.label : ""}
-                      </Text>
-                    ))}
+                    {last30DaysData
+                      .filter((_, idx) => idx % 5 === 0)
+                      .map((d, idx) => (
+                        <Text key={idx} style={[styles.chartXAxisLabel, { color: colors.textMuted }]}>
+                          {d.label}
+                        </Text>
+                      ))}
                   </View>
                 </View>
               </View>
             </View>
 
-            {/* POINTS EARNED */}
-            <Text style={[styles.analyticsChartTitle, { marginTop: 16 }]}>
-              Points Earned (Last 30 Days)
+            <Text style={[styles.analyticsChartTitle, { marginTop: 16, color: colors.text }]}>
+              Points Trend
             </Text>
-            <Text style={styles.analyticsChartSubtitle}>
-              Points accumulated each day
+            <Text style={[styles.analyticsChartSubtitle, { color: colors.textMuted }]}>
+              Points earned per day (last 30 days)
             </Text>
-
-            <View style={styles.chartContainer}>
+            <View style={[styles.chartContainer, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
               <View style={styles.chartRow}>
-                {/* Y Axis */}
                 <View style={styles.chartYAxis}>
-                  {pointsYAxisTicks
-                    .slice()
-                    .reverse()
-                    .map((v) => (
-                      <Text key={v} style={styles.chartYAxisLabel}>
-                        {v}
-                      </Text>
-                    ))}
+                  <Text style={[styles.chartYAxisLabel, { color: colors.textMuted }]}>
+                    {pointsYAxisTicks[pointsYAxisTicks.length - 1] || 0}
+                  </Text>
+                  <Text style={[styles.chartYAxisLabel, { color: colors.textMuted }]}>0</Text>
                 </View>
-
-                {/* Line chart + X Axis */}
                 <View style={styles.chartMainArea}>
-                  {/* line + noktalar */}
-                  <View style={styles.chartLineWrapper}>
-                    <Svg width="100%" height={120} viewBox="0 0 300 120">
-                      {(() => {
-                        const chartHeight = 100;
-                        const chartWidth =
-                          last30DaysData.length > 1
-                            ? last30DaysData.length - 1
-                            : 1;
-            
-                        const points = last30DaysData.map((d, i) => {
-                          const x = (i / chartWidth) * 300;
-                          const pointsClamped = Math.min(d.points, POINTS_MAX_Y);
-                          const y =
-                            chartHeight -
-                              (pointsClamped / POINTS_MAX_Y) * chartHeight ||
-                            chartHeight;
-                          return { x, y: y + 10 };
-                        });
-
-                        const polylinePoints = points
-                          .map((p) => `${p.x},${p.y}`)
-                          .join(" ");
-
-                        return (
-                          <>
-                            <Polyline
-                              points={polylinePoints}
-                              fill="none"
-                              stroke="#3b82f6"
-                              strokeWidth={2}
-                            />
-                            {points.map((p, idx) => (
-                              <Circle
-                                key={idx}
-                                cx={p.x}
-                                cy={p.y}
-                                r={3}
-                                fill="#3b82f6"
-                              />
-                            ))}
-                          </>
-                        );
-                      })()}
-                    </Svg>
-                  </View>
-
-                  {/* alt çizgi */}
-                  <View style={styles.chartBottomAxis} />
-
-                  {/* tarih etiketleri */}
-                  <View style={styles.chartXAxis}>
+                  <View style={styles.chartBarsRow}>
                     {last30DaysData.map((d, idx) => {
-                      const countClamped = Math.min(d.count, DAILY_MAX_Y);
-                      const h = (countClamped / DAILY_MAX_Y) * 100 || 2;
+                      const maxTick = pointsYAxisTicks[pointsYAxisTicks.length - 1] || 1;
+                      const ratio = maxTick > 0 ? d.points / maxTick : 0;
+                      const h = ratio * 100;
                       return (
                         <View key={idx} style={styles.chartBarGroup}>
-                          <View
-                            style={[
-                              styles.chartBar,
-                              { height: `${h}%`, backgroundColor: "#3b82f6" },
-                            ]}
-                          />
+                          {h > 0 && (
+                            <View
+                              style={[
+                                styles.chartBar,
+                                { height: `${h}%`, backgroundColor: "#ec4899" },
+                              ]}
+                            />
+                          )}
                         </View>
                       );
                     })}
+                  </View>
+                  <View style={[styles.chartBottomAxis, { backgroundColor: colors.border }]} />
+                  <View style={styles.chartXAxis}>
+                    {last30DaysData
+                      .filter((_, idx) => idx % 5 === 0)
+                      .map((d, idx) => (
+                        <Text key={idx} style={[styles.chartXAxisLabel, { color: colors.textMuted }]}>
+                          {d.label}
+                        </Text>
+                      ))}
                   </View>
                 </View>
               </View>
@@ -840,71 +808,77 @@ export default function ProgressScreen() {
 
         {analyticsTab === "trends" && (
           <>
-            {/* Weekly Trend */}
-            <Text style={styles.analyticsChartTitle}>Weekly Trend</Text>
-            <Text style={styles.analyticsChartSubtitle}>
+            <Text style={[styles.analyticsChartTitle, { color: colors.text }]}>Weekly Trend</Text>
+            <Text style={[styles.analyticsChartSubtitle, { color: colors.textMuted }]}>
               Challenge completion over the last 12 weeks
             </Text>
-            <View style={styles.chartContainer}>
+            <View style={[styles.chartContainer, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
               <View style={styles.chartRow}>
                 <View style={styles.chartYAxis}>
-                  {/* sadece basit 0 ve max için */}
-                  <Text style={styles.chartYAxisLabel}>
-                    {Math.max(maxWeeklyChallenges, maxWeeklyPoints)}
+                  <Text style={[styles.chartYAxisLabel, { color: colors.textMuted }]}>
+                    {Math.max(maxWeeklyChallenges, maxWeeklyPoints, 1)}
                   </Text>
-                  <Text style={styles.chartYAxisLabel}>0</Text>
+                  <Text style={[styles.chartYAxisLabel, { color: colors.textMuted }]}>0</Text>
                 </View>
                 <View style={styles.chartMainArea}>
                   <View style={styles.chartBarsRow}>
                     {weeklyTrendData.map((w, idx) => {
-                      const hChallenges =
-                        (w.challenges / maxWeeklyChallenges) * 100 || 2;
-                      const hPoints = (w.points / maxWeeklyPoints) * 100 || 2;
+                      const challengeRatio =
+                        maxWeeklyChallenges > 0
+                          ? w.challenges / maxWeeklyChallenges
+                          : 0;
+                      const pointsRatio =
+                        maxWeeklyPoints > 0 ? w.points / maxWeeklyPoints : 0;
+                      const hChallenges = challengeRatio * 100;
+                      const hPoints = pointsRatio * 100;
                       return (
                         <View key={idx} style={styles.chartBarGroup}>
-                          <View
-                            style={[
-                              styles.chartBar,
-                              {
-                                height: `${hChallenges}%`,
-                                backgroundColor: "#3b82f6",
-                              },
-                            ]}
-                          />
-                          <View
-                            style={[
-                              styles.chartBar,
-                              {
-                                height: `${hPoints}%`,
-                                backgroundColor: "#ec4899",
-                                marginTop: 2,
-                              },
-                            ]}
-                          />
+                          {hChallenges > 0 && (
+                            <View
+                              style={[
+                                styles.chartBar,
+                                {
+                                  height: `${hChallenges}%`,
+                                  backgroundColor: colors.primary,
+                                },
+                              ]}
+                            />
+                          )}
+                          {hPoints > 0 && (
+                            <View
+                              style={[
+                                styles.chartBar,
+                                {
+                                  height: `${hPoints}%`,
+                                  backgroundColor: "#ec4899",
+                                  marginTop: 2,
+                                },
+                              ]}
+                            />
+                          )}
                         </View>
                       );
                     })}
                   </View>
-                  <View style={styles.chartBottomAxis} />
+                  <View style={[styles.chartBottomAxis, { backgroundColor: colors.border }]} />
                   <View style={styles.chartXAxis}>
                     {weeklyTrendData.map((w, idx) => (
-                      <Text key={idx} style={styles.chartXAxisLabel}>
-                        {idx % 3 === 0 ? w.label : ""}
+                      <Text key={idx} style={[styles.chartXAxisLabel, { color: colors.textMuted }]}>
+                        {w.label}
                       </Text>
                     ))}
                   </View>
                 </View>
               </View>
-              {/* Legend */}
               <View style={styles.chartLegendRow}>
                 <View style={styles.chartLegendItem}>
                   <View
                     style={[
                       styles.chartLegendDot,
-                      { backgroundColor: "#3b82f6" },
+                      { backgroundColor: colors.primary },
                     ]}
                   />
-                  <Text style={styles.chartLegendText}>Challenges</Text>
+                  <Text style={[styles.chartLegendText, { color: colors.textSecondary }]}>Challenges</Text>
                 </View>
                 <View style={styles.chartLegendItem}>
                   <View
@@ -913,61 +887,69 @@ export default function ProgressScreen() {
                       { backgroundColor: "#ec4899" },
                     ]}
                   />
-                  <Text style={styles.chartLegendText}>Points</Text>
+                  <Text style={[styles.chartLegendText, { color: colors.textSecondary }]}>Points</Text>
                 </View>
               </View>
             </View>
 
-            {/* Monthly Trend */}
-            <Text style={[styles.analyticsChartTitle, { marginTop: 16 }]}>
+            <Text style={[styles.analyticsChartTitle, { marginTop: 16, color: colors.text }]}>
               Monthly Trend
             </Text>
-            <Text style={styles.analyticsChartSubtitle}>
+            <Text style={[styles.analyticsChartSubtitle, { color: colors.textMuted }]}>
               Challenge completion over the last 12 months
             </Text>
-            <View style={styles.chartContainer}>
+            <View style={[styles.chartContainer, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
               <View style={styles.chartRow}>
                 <View style={styles.chartYAxis}>
-                  <Text style={styles.chartYAxisLabel}>
-                    {Math.max(maxMonthlyChallenges, maxMonthlyPoints)}
+                  <Text style={[styles.chartYAxisLabel, { color: colors.textMuted }]}>
+                    {Math.max(maxMonthlyChallenges, maxMonthlyPoints, 1)}
                   </Text>
-                  <Text style={styles.chartYAxisLabel}>0</Text>
+                  <Text style={[styles.chartYAxisLabel, { color: colors.textMuted }]}>0</Text>
                 </View>
                 <View style={styles.chartMainArea}>
                   <View style={styles.chartBarsRow}>
                     {monthlyTrendData.map((m, idx) => {
-                      const hChallenges =
-                        (m.challenges / maxMonthlyChallenges) * 100 || 2;
-                      const hPoints = (m.points / maxMonthlyPoints) * 100 || 2;
+                      const challengeRatio =
+                        maxMonthlyChallenges > 0
+                          ? m.challenges / maxMonthlyChallenges
+                          : 0;
+                      const pointsRatio =
+                        maxMonthlyPoints > 0 ? m.points / maxMonthlyPoints : 0;
+                      const hChallenges = challengeRatio * 100;
+                      const hPoints = pointsRatio * 100;
                       return (
                         <View key={idx} style={styles.chartBarGroup}>
-                          <View
-                            style={[
-                              styles.chartBar,
-                              {
-                                height: `${hChallenges}%`,
-                                backgroundColor: "#3b82f6",
-                              },
-                            ]}
-                          />
-                          <View
-                            style={[
-                              styles.chartBar,
-                              {
-                                height: `${hPoints}%`,
-                                backgroundColor: "#ec4899",
-                                marginTop: 2,
-                              },
-                            ]}
-                          />
+                          {hChallenges > 0 && (
+                            <View
+                              style={[
+                                styles.chartBar,
+                                {
+                                  height: `${hChallenges}%`,
+                                  backgroundColor: colors.primary,
+                                },
+                              ]}
+                            />
+                          )}
+                          {hPoints > 0 && (
+                            <View
+                              style={[
+                                styles.chartBar,
+                                {
+                                  height: `${hPoints}%`,
+                                  backgroundColor: "#ec4899",
+                                  marginTop: 2,
+                                },
+                              ]}
+                            />
+                          )}
                         </View>
                       );
                     })}
                   </View>
-                  <View style={styles.chartBottomAxis} />
+                  <View style={[styles.chartBottomAxis, { backgroundColor: colors.border }]} />
                   <View style={styles.chartXAxis}>
                     {monthlyTrendData.map((m, idx) => (
-                      <Text key={idx} style={styles.chartXAxisLabel}>
+                      <Text key={idx} style={[styles.chartXAxisLabel, { color: colors.textMuted }]}>
                         {m.label}
                       </Text>
                     ))}
@@ -979,10 +961,10 @@ export default function ProgressScreen() {
                   <View
                     style={[
                       styles.chartLegendDot,
-                      { backgroundColor: "#3b82f6" },
+                      { backgroundColor: colors.primary },
                     ]}
                   />
-                  <Text style={styles.chartLegendText}>Challenges</Text>
+                  <Text style={[styles.chartLegendText, { color: colors.textSecondary }]}>Challenges</Text>
                 </View>
                 <View style={styles.chartLegendItem}>
                   <View
@@ -991,7 +973,7 @@ export default function ProgressScreen() {
                       { backgroundColor: "#ec4899" },
                     ]}
                   />
-                  <Text style={styles.chartLegendText}>Points</Text>
+                  <Text style={[styles.chartLegendText, { color: colors.textSecondary }]}>Points</Text>
                 </View>
               </View>
             </View>
@@ -999,15 +981,18 @@ export default function ProgressScreen() {
         )}
 
         {analyticsTab === "categories" && (
-          <View style={styles.categoriesAnalyticsContainer}>
+          <View style={[styles.categoriesAnalyticsContainer, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
             {categoryEntries.length === 0 ? (
-              <Text style={styles.emptyTextSmall}>
+              <Text style={[styles.emptyTextSmall, { color: colors.textMuted }]}>
                 No category data yet. Complete some challenges first.
               </Text>
             ) : (
               <>
-                <Text style={styles.analyticsChartTitle}>
+                <Text style={[styles.analyticsChartTitle, { color: colors.text }]}>
                   Category Distribution
+                </Text>
+                <Text style={[styles.analyticsChartSubtitle, { color: colors.textMuted }]}>
+                  Breakdown of challenges by category
                 </Text>
                 <View style={styles.pieRow}>
                   <Svg width={160} height={160} viewBox="0 0 160 160">
@@ -1018,7 +1003,7 @@ export default function ProgressScreen() {
                         const endAngle = startAngle + value;
                         const color =
                           categoryConfig[cat as ChallengeCategory]?.color ||
-                          "#3b82f6";
+                          colors.primary;
                         const d = describeArc(80, 80, 70, startAngle, endAngle);
                         startAngle = endAngle;
                         return <Path key={cat} d={d} fill={color} />;
@@ -1026,12 +1011,12 @@ export default function ProgressScreen() {
                     })()}
                   </Svg>
                   <View style={styles.pieLegend}>
-                    <Text style={styles.pieLegendTitle}>
+                    <Text style={[styles.pieLegendTitle, { color: colors.text }]}>
                       Category Breakdown
                     </Text>
                     {categoryEntries.map(([cat, count]) => {
                       const config = categoryConfig[cat as ChallengeCategory];
-                      const color = config?.color || "#3b82f6";
+                      const color = config?.color || colors.primary;
                       const label = config?.label || cat;
                       const percent = Math.round((count / categoryTotal) * 100);
                       return (
@@ -1043,8 +1028,8 @@ export default function ProgressScreen() {
                             ]}
                           />
                           <View>
-                            <Text style={styles.pieLegendLabel}>{label}</Text>
-                            <Text style={styles.pieLegendText}>
+                            <Text style={[styles.pieLegendLabel, { color: colors.text }]}>{label}</Text>
+                            <Text style={[styles.pieLegendText, { color: colors.textSecondary }]}>
                               {count} • {percent}%
                             </Text>
                           </View>
@@ -1059,17 +1044,16 @@ export default function ProgressScreen() {
         )}
       </View>
 
-      {/* CHALLENGE HISTORY */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Challenge History</Text>
-        <Text style={styles.sectionSubText}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Challenge History</Text>
+        <Text style={[styles.sectionSubText, { color: colors.textSecondary }]}>
           Review your completed challenges and achievements
         </Text>
 
         {history.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📝</Text>
-            <Text style={styles.emptyText}>No completed challenges yet</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No completed challenges yet</Text>
           </View>
         ) : (
           history.map((item) => {
@@ -1085,7 +1069,7 @@ export default function ProgressScreen() {
             return (
               <TouchableOpacity
                 key={item.id}
-                style={styles.historyCard}
+                style={[styles.historyCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}
                 onPress={() =>
                   setExpandedId(isExpanded ? null : (item.id as string))
                 }
@@ -1097,22 +1081,22 @@ export default function ProgressScreen() {
                     style={styles.historyIcon}
                   />
                   <View style={styles.historyMainInfo}>
-                    <Text style={styles.historyTitle}>{item.title}</Text>
-                    <Text style={styles.historyCategory}>
+                    <Text style={[styles.historyTitle, { color: colors.text }]}>{item.title}</Text>
+                    <Text style={[styles.historyCategory, { color: colors.textSecondary }]}>
                       {category?.label || item.category}
                     </Text>
                     <View style={styles.historyMetaRow}>
-                      <Text style={styles.historyMetaText}>
+                      <Text style={[styles.historyMetaText, { color: colors.textMuted }]}>
                         {item.completedAt
                           ? new Date(item.completedAt).toLocaleDateString()
                           : ""}
                       </Text>
-                      <Text style={styles.historyMetaDot}>•</Text>
-                      <Text style={styles.historyMetaText}>
+                      <Text style={[styles.historyMetaDot, { color: colors.textMuted }]}>•</Text>
+                      <Text style={[styles.historyMetaText, { color: colors.textMuted }]}>
                         Time: {item.estimatedMinutes || 2}:00
                       </Text>
-                      <Text style={styles.historyMetaDot}>•</Text>
-                      <Text style={styles.historyMetaText}>
+                      <Text style={[styles.historyMetaDot, { color: colors.textMuted }]}>•</Text>
+                      <Text style={[styles.historyMetaText, { color: colors.textMuted }]}>
                         {item.pointsEarned} points
                       </Text>
                     </View>
@@ -1129,7 +1113,7 @@ export default function ProgressScreen() {
 
                 {isExpanded && item.description && (
                   <View style={styles.historyExpanded}>
-                    <Text style={styles.historyExpandedText}>
+                    <Text style={[styles.historyExpandedText, { color: colors.textSecondary }]}>
                       {item.description}
                     </Text>
                   </View>
@@ -1146,11 +1130,13 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
   },
   content: {
     padding: 20,
     paddingBottom: 32,
+  },
+  contentSmallPadding: {
+    paddingHorizontal: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -1158,55 +1144,49 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Header
   header: {
     marginBottom: 20,
   },
   screenTitle: {
     fontSize: 28,
     fontWeight: "700",
-    color: "#0f172a",
     marginBottom: 4,
+  },
+  screenTitleSmall: {
+    fontSize: 24,
   },
   screenSubtitle: {
     fontSize: 14,
-    color: "#6b7280",
   },
 
-  // Top overview cards
   topStatsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     marginBottom: 16,
   },
   topStatCard: {
     flex: 1,
     marginRight: 8,
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
   topStatCardLast: {
     flex: 1,
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+  },
+  topStatCardCompact: {
+    marginRight: 0,
+    marginBottom: 8,
+    flexBasis: "48%",
   },
   topStatIconRow: {
     flexDirection: "row",
     justifyContent: "flex-start",
     marginBottom: 10,
-  },
-  topStatIconContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 999,
-    justifyContent: "center",
-    alignItems: "center",
   },
   topStatIcon: {
     width: 18,
@@ -1215,13 +1195,11 @@ const styles = StyleSheet.create({
   },
   topStatLabel: {
     fontSize: 12,
-    color: "#6b7280",
     marginBottom: 6,
   },
   topStatValue: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#0f172a",
   },
   topStatValueSuffix: {
     fontSize: 16,
@@ -1229,37 +1207,36 @@ const styles = StyleSheet.create({
   },
   topStatHint: {
     fontSize: 11,
-    color: "#9ca3af",
     marginTop: 4,
   },
 
-  // Middle row cards
   middleRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     marginBottom: 24,
   },
   largeCard: {
     flex: 1,
     marginRight: 8,
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
   largeCardLast: {
     flex: 1,
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+  },
+  largeCardCompact: {
+    marginRight: 0,
+    marginBottom: 12,
+    flexBasis: "48%",
   },
   largeCardTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#0f172a",
     marginBottom: 12,
   },
   largeCardRow: {
@@ -1267,33 +1244,23 @@ const styles = StyleSheet.create({
   },
   largeCardLabel: {
     fontSize: 12,
-    color: "#6b7280",
   },
   largeCardValue: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#111827",
     marginTop: 2,
   },
   largeCardIconRow: {
     flexDirection: "row",
     alignItems: "center",
   },
-  largeCardIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
   largeCardIcon: {
     width: 18,
     height: 18,
     resizeMode: "contain",
+    marginRight: 10,
   },
 
-  // Section generic
   section: {
     marginBottom: 24,
   },
@@ -1306,21 +1273,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#0f172a",
     marginBottom: 4,
   },
   sectionSubText: {
     fontSize: 12,
-    color: "#6b7280",
   },
 
-  // Overall achievement progress
   overallProgressCard: {
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     marginTop: 8,
     marginBottom: 16,
   },
@@ -1332,40 +1294,33 @@ const styles = StyleSheet.create({
   overallTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#0f172a",
   },
   overallPercent: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#3b82f6",
   },
   overallHint: {
     fontSize: 12,
-    color: "#6b7280",
     marginBottom: 8,
   },
 
   progressBarContainer: {
     height: 10,
-    backgroundColor: "#e5e7eb",
     borderRadius: 999,
     overflow: "hidden",
   },
   progressBar: {
     height: "100%",
-    backgroundColor: "#3b82f6",
     borderRadius: 999,
   },
 
   subSectionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111827",
     marginBottom: 8,
   },
   emptyTextSmall: {
     fontSize: 12,
-    color: "#9ca3af",
   },
 
   achievementsScroll: {
@@ -1375,7 +1330,6 @@ const styles = StyleSheet.create({
   },
   achievementCard: {
     flexDirection: "row",
-    width: width * 0.8,
     borderRadius: 16,
     padding: 16,
     marginRight: 12,
@@ -1385,7 +1339,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#e5e7eb",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -1399,12 +1352,10 @@ const styles = StyleSheet.create({
   achievementName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111827",
     marginBottom: 4,
   },
   achievementDesc: {
     fontSize: 12,
-    color: "#6b7280",
     marginBottom: 4,
   },
   achievementTierBadge: {
@@ -1419,12 +1370,10 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   lockedAchievementCard: {
-    width: (width - 52) / 2,
-    backgroundColor: "#ffffff",
+    width: (INITIAL_WIDTH - 52) / 2,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     marginBottom: 12,
   },
   lockedHeaderRow: {
@@ -1437,7 +1386,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#f3f4f6",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1446,44 +1394,37 @@ const styles = StyleSheet.create({
   },
   lockedTierLabel: {
     fontSize: 11,
-    color: "#9ca3af",
   },
   lockedAchievementName: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#0f172a",
     marginBottom: 4,
   },
   lockedAchievementDesc: {
     fontSize: 11,
-    color: "#6b7280",
     marginBottom: 8,
   },
   progressLabel: {
     fontSize: 11,
-    color: "#6b7280",
     marginBottom: 4,
   },
   progressBarContainerMini: {
     height: 8,
-    backgroundColor: "#e5e7eb",
     borderRadius: 999,
     overflow: "hidden",
   },
   progressBarMini: {
     height: "100%",
-    backgroundColor: "#3b82f6",
   },
   progressMiniText: {
     fontSize: 11,
-    color: "#6b7280",
     textAlign: "right",
     marginTop: 4,
   },
 
-  // Analytics
   analyticsSummaryRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     marginTop: 12,
     marginBottom: 12,
@@ -1491,19 +1432,20 @@ const styles = StyleSheet.create({
   analyticsSummaryCard: {
     flex: 1,
     marginRight: 8,
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
   analyticsSummaryCardLast: {
     flex: 1,
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+  },
+  analyticsCardCompact: {
+    marginRight: 0,
+    marginBottom: 8,
+    flexBasis: "48%",
   },
   analyticsSummaryHeaderRow: {
     flexDirection: "row",
@@ -1524,23 +1466,19 @@ const styles = StyleSheet.create({
   },
   analyticsSummaryLabel: {
     fontSize: 11,
-    color: "#6b7280",
     marginBottom: 4,
   },
   analyticsSummaryValue: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#0f172a",
   },
   analyticsSummaryHint: {
     fontSize: 11,
-    color: "#9ca3af",
     marginTop: 2,
   },
 
   tabsRow: {
     flexDirection: "row",
-    backgroundColor: "#e5e7eb",
     borderRadius: 999,
     padding: 2,
     marginBottom: 12,
@@ -1551,38 +1489,26 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     alignItems: "center",
   },
-  tabButtonActive: {
-    backgroundColor: "#ffffff",
-  },
   tabText: {
     fontSize: 13,
-    color: "#6b7280",
     fontWeight: "500",
-  },
-  tabTextActive: {
-    color: "#0f172a",
-    fontWeight: "600",
   },
 
   analyticsChartTitle: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#111827",
     marginBottom: 2,
   },
   analyticsChartSubtitle: {
     fontSize: 11,
-    color: "#9ca3af",
     marginBottom: 6,
   },
 
   chartContainer: {
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     marginBottom: 4,
   },
   chartRow: {
@@ -1596,7 +1522,6 @@ const styles = StyleSheet.create({
   },
   chartYAxisLabel: {
     fontSize: 10,
-    color: "#9ca3af",
   },
   chartMainArea: {
     flex: 1,
@@ -1617,7 +1542,6 @@ const styles = StyleSheet.create({
   },
   chartBottomAxis: {
     height: 1,
-    backgroundColor: "#e5e7eb",
     marginTop: 6,
   },
   chartXAxis: {
@@ -1628,7 +1552,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     fontSize: 9,
-    color: "#9ca3af",
   },
   chartLegendRow: {
     flexDirection: "row",
@@ -1648,16 +1571,12 @@ const styles = StyleSheet.create({
   },
   chartLegendText: {
     fontSize: 11,
-    color: "#6b7280",
   },
 
-  // Categories analytics (pie)
   categoriesAnalyticsContainer: {
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
   pieRow: {
     flexDirection: "row",
@@ -1671,7 +1590,6 @@ const styles = StyleSheet.create({
   pieLegendTitle: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#0f172a",
     marginBottom: 6,
   },
   pieLegendItem: {
@@ -1688,30 +1606,31 @@ const styles = StyleSheet.create({
   pieLegendLabel: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#111827",
   },
   pieLegendText: {
     fontSize: 11,
-    color: "#6b7280",
   },
 
-  // History
   historyCard: {
-    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 14,
-    marginBottom: 10,
+    marginTop: 10,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "flex-start",
   },
   historyLeft: {
     flexDirection: "row",
+    flex: 1,
     alignItems: "flex-start",
   },
   historyIcon: {
-    width: 30,
-    height: 30,
-    marginRight: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    marginRight: 12,
+    resizeMode: "cover",
   },
   historyMainInfo: {
     flex: 1,
@@ -1719,72 +1638,69 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111827",
+    marginBottom: 2,
   },
   historyCategory: {
     fontSize: 12,
-    color: "#6b7280",
-    marginTop: 2,
+    marginBottom: 4,
   },
   historyMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
+    flexWrap: "wrap",
   },
   historyMetaText: {
     fontSize: 11,
-    color: "#9ca3af",
   },
   historyMetaDot: {
-    fontSize: 10,
-    color: "#cbd5e1",
     marginHorizontal: 4,
+    fontSize: 11,
   },
   historyRight: {
-    position: "absolute",
-    top: 12,
-    right: 14,
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    marginLeft: 8,
   },
-  historyExpanded: {
-    marginTop: 8,
-  },
-  historyExpandedText: {
-    fontSize: 12,
-    color: "#6b7280",
-    lineHeight: 18,
-  },
-
   difficultyBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
-  },
-  difficultyBadgeEasy: {
-    backgroundColor: "#dcfce7",
-  },
-  difficultyBadgeMedium: {
-    backgroundColor: "#fef3c7",
+    borderRadius: 6,
   },
   difficultyBadgeHard: {
     backgroundColor: "#fee2e2",
   },
+  difficultyBadgeMedium: {
+    backgroundColor: "#fef3c7",
+  },
+  difficultyBadgeEasy: {
+    backgroundColor: "#dcfce7",
+  },
   difficultyBadgeText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#111827",
+    textTransform: "capitalize",
+  },
+  historyExpanded: {
+    width: "100%",
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e5e7eb",
+  },
+  historyExpandedText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
 
-  // Empty states
   emptyContainer: {
     alignItems: "center",
-    paddingVertical: 24,
+    paddingVertical: 32,
   },
   emptyIcon: {
-    fontSize: 40,
+    fontSize: 32,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: "#6b7280",
   },
 });

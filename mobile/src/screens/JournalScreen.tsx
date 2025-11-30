@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Audio } from "expo-av";
+import { useTheme } from "../contexts/ThemeContext";
 
 type MediaKind = "image" | "video" | "audio" | "other";
 
@@ -30,6 +31,7 @@ interface JournalEntry {
 type FilterType = "all" | "text" | "audio" | "media";
 
 export default function JournalScreen() {
+  const { colors, isDark } = useTheme();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [selectedMediaType, setSelectedMediaType] = useState<
@@ -41,7 +43,6 @@ export default function JournalScreen() {
     tags: "",
   });
 
-  // media upload / record için
   const [mediaUrl, setMediaUrl] = useState<string | undefined>(undefined);
   const [mediaMeta, setMediaMeta] = useState<{
     kind: MediaKind;
@@ -51,15 +52,12 @@ export default function JournalScreen() {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
 
-  // audio playback için
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [playingEntryId, setPlayingEntryId] = useState<string | null>(null);
 
-  // liste filtreleme ve detay açma
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
 
-  // ARAMA (başlık, metin, etiket, dosya adı)
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -114,7 +112,6 @@ export default function JournalScreen() {
     });
   };
 
-  // ---------- AUDIO KAYIT ----------
   const startRecording = async () => {
     try {
       const permission = await Audio.requestPermissionsAsync();
@@ -161,7 +158,6 @@ export default function JournalScreen() {
     }
   };
 
-  // ---------- DOSYA / GALERİ SEÇİMİ ----------
   const pickFileFromLibrary = async () => {
     try {
       const permission =
@@ -198,7 +194,6 @@ export default function JournalScreen() {
     }
   };
 
-  // media tipini değiştirirken eski uri'ı temizle
   const changeMediaType = (type: "text" | "audio" | "file") => {
     setSelectedMediaType(type);
     setMediaUrl(undefined);
@@ -207,7 +202,6 @@ export default function JournalScreen() {
     setIsRecording(false);
   };
 
-  // ---------- AUDIO PLAYBACK ----------
   const togglePlayAudio = async (entry: JournalEntry) => {
     if (!entry.mediaUrl) return;
 
@@ -238,7 +232,6 @@ export default function JournalScreen() {
     }
   };
 
-  // TÜM ETİKETLER (Etiketler butonu için)
   const allTags = Array.from(
     new Set(
       entries.flatMap((e) => e.tags.map((t) => t.trim()).filter(Boolean)),
@@ -254,7 +247,6 @@ export default function JournalScreen() {
     Alert.alert("Tags", allTags.join(", "));
   };
 
-  // ---------- LİSTE FİLTRESİ + ARAMA ----------
   const getFilteredEntries = () => {
     let list = entries;
 
@@ -295,72 +287,70 @@ export default function JournalScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["bottom"]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* HEADER */}
         <View style={styles.header}>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Write text, record audio or add media. All in one place.
           </Text>
         </View>
 
-        {/* YENİ GİRİŞ BUTONU */}
         <TouchableOpacity
-          style={styles.newEntryButton}
+          style={[styles.newEntryButton, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}
           onPress={() => setShowNewEntry(!showNewEntry)}
           activeOpacity={0.8}
         >
-          <Text style={styles.newEntryButtonText}>
+          <Text style={[styles.newEntryButtonText, { color: colors.text }]}>
             {showNewEntry ? "− Cancel" : "+ New Entry"}
           </Text>
         </TouchableOpacity>
 
-        {/* YENİ GİRİŞ FORMU */}
         {showNewEntry && (
-          <View style={styles.newEntryForm}>
-            <Text style={styles.formLabel}>Title</Text>
+          <View style={[styles.newEntryForm, { backgroundColor: colors.surfaceSecondary, borderColor: colors.cardBorder }]}>
+            <Text style={[styles.formLabel, { color: colors.text }]}>Title</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
               placeholder="Entry title"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={colors.inputPlaceholder}
               value={newEntry.title}
               onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
             />
 
-            <Text style={styles.formLabel}>Date</Text>
-            <View style={styles.dateDisplay}>
-              <Text style={styles.dateText}>
+            <Text style={[styles.formLabel, { color: colors.text }]}>Date</Text>
+            <View style={[styles.dateDisplay, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+              <Text style={[styles.dateText, { color: colors.inputText }]}>
                 {new Date().toLocaleDateString()}
               </Text>
             </View>
 
-            <Text style={styles.formLabel}>Tags (comma-separated)</Text>
+            <Text style={[styles.formLabel, { color: colors.text }]}>Tags (comma-separated)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
               placeholder="wellness, mindfulness, goals"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={colors.inputPlaceholder}
               value={newEntry.tags}
               onChangeText={(text) => setNewEntry({ ...newEntry, tags: text })}
             />
 
-            <Text style={styles.formLabel}>Media / File (optional)</Text>
+            <Text style={[styles.formLabel, { color: colors.text }]}>Media / File (optional)</Text>
             <View style={styles.mediaTypeContainer}>
               <TouchableOpacity
                 style={[
                   styles.mediaTypeButton,
-                  selectedMediaType === "text" && styles.mediaTypeButtonActive,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                  selectedMediaType === "text" && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
                 ]}
                 onPress={() => changeMediaType("text")}
               >
                 <Text
                   style={[
                     styles.mediaTypeButtonText,
-                    selectedMediaType === "text" &&
-                      styles.mediaTypeButtonTextActive,
+                    { color: colors.textSecondary },
+                    selectedMediaType === "text" && { color: colors.text, fontWeight: "600" },
                   ]}
                 >
                   Text
@@ -370,15 +360,16 @@ export default function JournalScreen() {
               <TouchableOpacity
                 style={[
                   styles.mediaTypeButton,
-                  selectedMediaType === "audio" && styles.mediaTypeButtonActive,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                  selectedMediaType === "audio" && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
                 ]}
                 onPress={() => changeMediaType("audio")}
               >
                 <Text
                   style={[
                     styles.mediaTypeButtonText,
-                    selectedMediaType === "audio" &&
-                      styles.mediaTypeButtonTextActive,
+                    { color: colors.textSecondary },
+                    selectedMediaType === "audio" && { color: colors.text, fontWeight: "600" },
                   ]}
                 >
                   Audio
@@ -388,15 +379,16 @@ export default function JournalScreen() {
               <TouchableOpacity
                 style={[
                   styles.mediaTypeButton,
-                  selectedMediaType === "file" && styles.mediaTypeButtonActive,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                  selectedMediaType === "file" && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
                 ]}
                 onPress={() => changeMediaType("file")}
               >
                 <Text
                   style={[
                     styles.mediaTypeButtonText,
-                    selectedMediaType === "file" &&
-                      styles.mediaTypeButtonTextActive,
+                    { color: colors.textSecondary },
+                    selectedMediaType === "file" && { color: colors.text, fontWeight: "600" },
                   ]}
                 >
                   Media / File
@@ -406,11 +398,11 @@ export default function JournalScreen() {
 
             {selectedMediaType === "text" && (
               <>
-                <Text style={styles.formLabel}>Content (optional)</Text>
+                <Text style={[styles.formLabel, { color: colors.text }]}>Content (optional)</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea]}
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
                   placeholder="Write your thoughts..."
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={colors.inputPlaceholder}
                   value={newEntry.content}
                   onChangeText={(text) =>
                     setNewEntry({ ...newEntry, content: text })
@@ -425,20 +417,20 @@ export default function JournalScreen() {
             {selectedMediaType === "audio" && (
               <View>
                 <TouchableOpacity
-                  style={styles.uploadButton}
+                  style={[styles.uploadButton, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}
                   onPress={isRecording ? stopRecording : startRecording}
                 >
                   <Text style={styles.uploadButtonIcon}>
                     {isRecording ? "⏹️" : "🎤"}
                   </Text>
-                  <Text style={styles.uploadButtonText}>
+                  <Text style={[styles.uploadButtonText, { color: colors.textSecondary }]}>
                     {isRecording
                       ? "Tap to stop & attach"
                       : "Tap to start recording"}
                   </Text>
                 </TouchableOpacity>
                 {mediaUrl && !isRecording && (
-                  <Text style={styles.attachedText}>
+                  <Text style={[styles.attachedText, { color: colors.success }]}>
                     Audio attached ✔ {mediaMeta?.fileName ?? ""}
                   </Text>
                 )}
@@ -448,16 +440,16 @@ export default function JournalScreen() {
             {selectedMediaType === "file" && (
               <View>
                 <TouchableOpacity
-                  style={styles.uploadButton}
+                  style={[styles.uploadButton, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}
                   onPress={pickFileFromLibrary}
                 >
                   <Text style={styles.uploadButtonIcon}>📎</Text>
-                  <Text style={styles.uploadButtonText}>
+                  <Text style={[styles.uploadButtonText, { color: colors.textSecondary }]}>
                     Choose from gallery/files
                   </Text>
                 </TouchableOpacity>
                 {mediaUrl && (
-                  <Text style={styles.attachedText}>
+                  <Text style={[styles.attachedText, { color: colors.success }]}>
                     File attached ✔ {mediaMeta?.fileName ?? ""}
                   </Text>
                 )}
@@ -465,51 +457,52 @@ export default function JournalScreen() {
             )}
 
             <TouchableOpacity
-              style={styles.saveButton}
+              style={[styles.saveButton, { backgroundColor: colors.primary }]}
               onPress={handleCreateEntry}
             >
-              <Text style={styles.saveButtonText}>+ Add</Text>
+              <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>+ Add</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* ENTRIES BAŞLIĞI */}
         <View style={styles.entriesSection}>
           <View style={styles.entriesHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Entries</Text>
-              <Text style={styles.entriesCount}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Entries</Text>
+              <Text style={[styles.entriesCount, { color: colors.textSecondary }]}>
                 {filteredEntries.length} shown • {entries.length} total
               </Text>
             </View>
           </View>
 
-          {/* ARAMA + ETİKETLER (webdeki gibi satır) */}
           <View style={styles.searchRow}>
-            <View style={styles.searchBox}>
-              <Text style={styles.searchIcon}>🔍</Text>
+            <View style={[styles.searchBox, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+              <Image
+                source={require("../../assets/search.png")}
+                style={styles.searchIcon}
+                resizeMode="contain"
+              />
               <TextInput
-                style={styles.searchInput}
+                style={[styles.searchInput, { color: colors.inputText }]}
                 placeholder="Search (title, text, tags, file name)"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
             </View>
 
             <TouchableOpacity
-              style={styles.tagsButton}
+              style={[styles.tagsButton, { backgroundColor: colors.backgroundSecondary }]}
               onPress={handleShowTags}
               activeOpacity={0.8}
             >
-              <Text style={styles.tagsButtonText}>Tags</Text>
-              <Text style={styles.tagsButtonCount}>{tagCount}</Text>
+              <Text style={[styles.tagsButtonText, { color: colors.text }]}>Tags</Text>
+              <Text style={[styles.tagsButtonCount, { color: colors.text }]}>{tagCount}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* TÜR FİLTRESİ */}
           <View style={styles.filterSection}>
-            <Text style={styles.filterLabel}>Filter by type</Text>
+            <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Filter by type</Text>
             <View style={styles.filterChipsRow}>
               {(
                 [
@@ -523,15 +516,16 @@ export default function JournalScreen() {
                   key={chip.key}
                   style={[
                     styles.filterChip,
-                    selectedFilter === chip.key && styles.filterChipActive,
+                    { borderColor: colors.cardBorder, backgroundColor: colors.cardBackground },
+                    selectedFilter === chip.key && { backgroundColor: colors.primary, borderColor: colors.primary },
                   ]}
                   onPress={() => setSelectedFilter(chip.key)}
                 >
                   <Text
                     style={[
                       styles.filterChipText,
-                      selectedFilter === chip.key &&
-                        styles.filterChipTextActive,
+                      { color: colors.textSecondary },
+                      selectedFilter === chip.key && { color: colors.textInverse, fontWeight: "600" },
                     ]}
                   >
                     {chip.label}
@@ -541,10 +535,9 @@ export default function JournalScreen() {
             </View>
           </View>
 
-          {/* ENTRIES LİSTESİ */}
           {filteredEntries.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>
+            <View style={[styles.emptyState, { backgroundColor: colors.surfaceSecondary, borderColor: colors.cardBorder }]}>
+              <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>
                 No entries found for this filter.
               </Text>
             </View>
@@ -557,15 +550,16 @@ export default function JournalScreen() {
                   key={entry.id}
                   style={[
                     styles.entryCard,
-                    isExpanded && styles.entryCardExpanded,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                    isExpanded && { borderColor: colors.primary },
                   ]}
                   activeOpacity={0.9}
                   onPress={() => onPressEntry(entry.id)}
                 >
                   <View style={styles.entryHeader}>
                     <View style={styles.entryTitleBlock}>
-                      <Text style={styles.entryTitle}>{entry.title}</Text>
-                      <Text style={styles.entryMetaType}>
+                      <Text style={[styles.entryTitle, { color: colors.text }]}>{entry.title}</Text>
+                      <Text style={[styles.entryMetaType, { color: colors.textSecondary }]}>
                         {entry.mediaType === "audio"
                           ? "Audio"
                           : entry.mediaType === "file"
@@ -573,69 +567,67 @@ export default function JournalScreen() {
                             : "Text"}
                       </Text>
                     </View>
-                    <Text style={styles.entryDate}>
+                    <Text style={[styles.entryDate, { color: colors.textMuted }]}>
                       {formatDate(entry.date)}
                     </Text>
                   </View>
 
-                  {/* TEXT ÖN İZLEME / DETAY */}
                   {entry.mediaType === "text" && entry.content && (
                     <Text
-                      style={styles.entryContent}
+                      style={[styles.entryContent, { color: colors.textSecondary }]}
                       numberOfLines={isExpanded ? undefined : 3}
                     >
                       {entry.content}
                     </Text>
                   )}
 
-                  {/* AUDIO PREVIEW */}
                   {entry.mediaKind === "audio" && entry.mediaUrl && (
                     <View style={styles.audioPreview}>
-                      <Text style={styles.entrySectionLabel}>Media</Text>
+                      <Text style={[styles.entrySectionLabel, { color: colors.textSecondary }]}>Media</Text>
                       <View style={styles.audioBarRow}>
                         <TouchableOpacity
                           onPress={() => togglePlayAudio(entry)}
-                          style={styles.audioPlayButton}
+                          style={[styles.audioPlayButton, { backgroundColor: colors.backgroundSecondary }]}
                         >
-                          <Text style={styles.audioPlayIcon}>
+                          <Text style={[styles.audioPlayIcon, { color: colors.text }]}>
                             {playingEntryId === entry.id ? "⏸" : "▶"}
                           </Text>
                         </TouchableOpacity>
-                        <View style={styles.audioProgressBar}>
+                        <View style={[styles.audioProgressBar, { backgroundColor: colors.backgroundSecondary }]}>
                           <View
                             style={[
                               styles.audioProgressFill,
-                              playingEntryId === entry.id &&
-                                styles.audioProgressFillActive,
+                              { backgroundColor: colors.border },
+                              playingEntryId === entry.id && { backgroundColor: colors.primary },
                             ]}
                           />
                         </View>
                       </View>
-                      <Text style={styles.audioFileName}>
+                      <Text style={[styles.audioFileName, { color: colors.textSecondary }]}>
                         {entry.fileName || "Audio recording"}
                       </Text>
                     </View>
                   )}
 
-                  {/* RESİM / DİĞER MEDYA PREVIEW */}
                   {entry.mediaType === "file" && entry.mediaUrl && (
                     <View style={styles.filePreview}>
-                      <Text style={styles.entrySectionLabel}>Media</Text>
+                      <Text style={[styles.entrySectionLabel, { color: colors.textSecondary }]}>Media</Text>
                       {entry.mediaKind === "image" ? (
                         <Image
                           source={{ uri: entry.mediaUrl }}
                           style={[
                             styles.imagePreview,
+                            { backgroundColor: colors.backgroundSecondary },
                             isExpanded && styles.imagePreviewExpanded,
                           ]}
                           resizeMode="cover"
                         />
                       ) : (
-                        <View style={styles.mediaIndicator}>
+                        <View style={[styles.mediaIndicator, { backgroundColor: colors.backgroundSecondary }]}>
                           <Text style={styles.mediaIcon}>
                             {entry.mediaKind === "video" ? "🎬" : "📄"}
                           </Text>
-                          <Text style={styles.mediaText}>
+                          <Text style={[styles.mediaText, { color: colors.textSecondary }]}>
                             {entry.fileName || "Attachment"}
                           </Text>
                         </View>
@@ -643,18 +635,17 @@ export default function JournalScreen() {
                     </View>
                   )}
 
-                  {/* TAGLER */}
                   {entry.tags.length > 0 && (
                     <View style={styles.tagsContainer}>
                       {entry.tags.map((tag, index) => (
-                        <View key={index} style={styles.tag}>
-                          <Text style={styles.tagText}>{tag}</Text>
+                        <View key={index} style={[styles.tag, { backgroundColor: colors.primaryLight }]}>
+                          <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
                         </View>
                       ))}
                     </View>
                   )}
 
-                  <Text style={styles.entryExpandHint}>
+                  <Text style={[styles.entryExpandHint, { color: colors.textMuted }]}>
                     {isExpanded ? "Tap to collapse" : "Tap to view details"}
                   </Text>
                 </TouchableOpacity>
@@ -668,7 +659,7 @@ export default function JournalScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f3f4f6" },
+  container: { flex: 1 },
   scrollView: { flex: 1 },
   scrollContent: { padding: 20, paddingBottom: 32 },
 
@@ -676,21 +667,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#111827",
     marginBottom: 4,
   },
-  subtitle: { fontSize: 14, color: "#6b7280" },
+  subtitle: { fontSize: 14 },
 
   newEntryButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#ffffff",
     borderRadius: 999,
     paddingVertical: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -698,101 +686,78 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   newEntryButtonText: {
-    color: "#111827",
     fontSize: 15,
     fontWeight: "600",
   },
 
   newEntryForm: {
-    backgroundColor: "#f9fafb",
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
   formLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#374151",
     marginBottom: 8,
     marginTop: 4,
   },
   input: {
-    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 12,
     fontSize: 15,
-    color: "#1f2937",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
   textArea: { height: 120, paddingTop: 12 },
 
   dateDisplay: {
-    backgroundColor: "#ffffff",
     borderRadius: 10,
     padding: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
-  dateText: { fontSize: 15, color: "#1f2937" },
+  dateText: { fontSize: 15 },
 
   mediaTypeContainer: { flexDirection: "row", gap: 8, marginBottom: 16 },
   mediaTypeButton: {
     flex: 1,
-    backgroundColor: "#ffffff",
     borderRadius: 999,
     paddingVertical: 8,
     paddingHorizontal: 10,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  mediaTypeButtonActive: {
-    backgroundColor: "#e0e7ff",
-    borderColor: "#4f46e5",
   },
   mediaTypeButtonText: {
     fontSize: 13,
-    color: "#6b7280",
     fontWeight: "500",
   },
-  mediaTypeButtonTextActive: { color: "#111827", fontWeight: "600" },
 
   uploadButton: {
-    backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 20,
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#e5e7eb",
     borderStyle: "dashed",
     marginBottom: 8,
   },
   uploadButtonIcon: { fontSize: 32, marginBottom: 8 },
   uploadButtonText: {
     fontSize: 14,
-    color: "#6b7280",
     fontWeight: "500",
   },
   attachedText: {
     fontSize: 12,
-    color: "#16a34a",
     marginBottom: 16,
   },
 
   saveButton: {
-    backgroundColor: "#111827",
     borderRadius: 999,
     paddingVertical: 12,
     alignItems: "center",
     marginTop: 8,
   },
   saveButtonText: {
-    color: "#ffffff",
     fontSize: 15,
     fontWeight: "600",
   },
@@ -804,10 +769,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  sectionTitle: { fontSize: 16, fontWeight: "600", color: "#111827" },
-  entriesCount: { fontSize: 12, color: "#6b7280", marginTop: 2 },
+  sectionTitle: { fontSize: 16, fontWeight: "600" },
+  entriesCount: { fontSize: 12, marginTop: 2 },
 
-  /* Search + Tags row */
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -818,42 +782,41 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#ffffff",
     borderRadius: 999,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     marginRight: 8,
   },
-  searchIcon: { fontSize: 16, color: "#9ca3af", marginRight: 6 },
+  searchIcon: {
+    width: 16,
+    height: 16,
+    marginRight: 6,
+  },
   searchInput: {
     flex: 1,
-    fontSize: 13,
     paddingVertical: 8,
-    color: "#111827",
+    fontSize: 14,
   },
+
   tagsButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e5e7eb",
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   tagsButtonText: {
     fontSize: 13,
-    color: "#111827",
     fontWeight: "500",
     marginRight: 4,
   },
   tagsButtonCount: {
     fontSize: 13,
-    color: "#111827",
     fontWeight: "600",
   },
 
   filterSection: { marginBottom: 16, marginTop: 4 },
-  filterLabel: { fontSize: 12, color: "#6b7280", marginBottom: 8 },
+  filterLabel: { fontSize: 12, marginBottom: 8 },
   filterChipsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -864,41 +827,26 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#ffffff",
-  },
-  filterChipActive: {
-    backgroundColor: "#2563eb",
-    borderColor: "#2563eb",
   },
   filterChipText: {
     fontSize: 13,
-    color: "#4b5563",
     fontWeight: "500",
-  },
-  filterChipTextActive: {
-    color: "#ffffff",
-    fontWeight: "600",
   },
 
   emptyState: {
-    backgroundColor: "#f9fafb",
     borderRadius: 12,
     padding: 32,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     marginTop: 8,
   },
-  emptyTitle: { fontSize: 14, color: "#6b7280", textAlign: "center" },
+  emptyTitle: { fontSize: 14, textAlign: "center" },
 
   entryCard: {
-    backgroundColor: "#ffffff",
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -906,7 +854,6 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   entryCardExpanded: {
-    borderColor: "#4f46e5",
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
@@ -922,18 +869,15 @@ const styles = StyleSheet.create({
   entryTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#111827",
   },
   entryMetaType: {
     marginTop: 2,
     fontSize: 11,
-    color: "#6b7280",
   },
-  entryDate: { fontSize: 12, color: "#9ca3af" },
+  entryDate: { fontSize: 12 },
 
   entryContent: {
     fontSize: 14,
-    color: "#4b5563",
     lineHeight: 20,
     marginBottom: 8,
     marginTop: 4,
@@ -942,7 +886,6 @@ const styles = StyleSheet.create({
   entrySectionLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#4b5563",
     marginBottom: 8,
     marginTop: 4,
   },
@@ -959,28 +902,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#e5e7eb",
     marginRight: 8,
   },
-  audioPlayIcon: { fontSize: 16, color: "#111827" },
+  audioPlayIcon: { fontSize: 16 },
   audioProgressBar: {
     flex: 1,
     height: 6,
     borderRadius: 999,
-    backgroundColor: "#e5e7eb",
     overflow: "hidden",
   },
   audioProgressFill: {
     width: "30%",
     height: "100%",
-    backgroundColor: "#cbd5e1",
-  },
-  audioProgressFillActive: {
-    backgroundColor: "#4f46e5",
   },
   audioFileName: {
     fontSize: 12,
-    color: "#6b7280",
   },
 
   filePreview: { marginTop: 4 },
@@ -988,7 +924,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 160,
     borderRadius: 10,
-    backgroundColor: "#e5e7eb",
   },
   imagePreviewExpanded: {
     height: 220,
@@ -997,14 +932,13 @@ const styles = StyleSheet.create({
   mediaIndicator: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f3f4f6",
     borderRadius: 8,
     padding: 8,
     marginTop: 4,
     marginBottom: 4,
   },
   mediaIcon: { fontSize: 16, marginRight: 8 },
-  mediaText: { fontSize: 13, color: "#6b7280", fontWeight: "500" },
+  mediaText: { fontSize: 13, fontWeight: "500" },
 
   tagsContainer: {
     flexDirection: "row",
@@ -1013,16 +947,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tag: {
-    backgroundColor: "#eff6ff",
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  tagText: { fontSize: 11, color: "#1d4ed8", fontWeight: "500" },
+  tagText: { fontSize: 11, fontWeight: "500" },
 
   entryExpandHint: {
     marginTop: 6,
     fontSize: 11,
-    color: "#9ca3af",
   },
 });

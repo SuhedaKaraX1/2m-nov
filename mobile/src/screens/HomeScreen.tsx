@@ -10,6 +10,7 @@ import {
   Image,
 } from "react-native";
 import { apiService } from "../services/api";
+import { useTheme } from "../contexts/ThemeContext";
 import {
   Challenge,
   UserProgress,
@@ -19,6 +20,7 @@ import {
 import Logo from "../../assets/logo.jpg";
 
 export default function HomeScreen({ navigation }: any) {
+  const { colors, isDark } = useTheme();
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [featuredChallenge, setFeaturedChallenge] = useState<Challenge | null>(
     null,
@@ -112,76 +114,88 @@ export default function HomeScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
       }
     >
       <View style={styles.header}>
         <View style={styles.logoContainer}>
           <Image source={Logo} style={styles.logoIcon} />
         </View>
-        <Text style={styles.title}>2Mins</Text>
+        <Text style={[styles.title, { color: colors.text }]}>2Mins</Text>
       </View>
 
-      {/* STATS ROW - ikonlar assets’ten geliyor */}
+      {/* STATS ROW - Modern Tasarım */}
       <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Image
-            source={require("../../assets/fire.png")}
-            style={styles.statIconImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.statLabel}>Current Streak</Text>
-          <Text style={styles.statValue}>
-            {progress?.currentStreak || 0} days
-          </Text>
-          <Text style={styles.statHint}>Keep it going!</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+          <View style={[styles.statIconWrapper, { backgroundColor: colors.primaryLight }]}>
+            <Image
+              source={require("../../assets/fire.png")}
+              style={styles.statIconImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statValue, { color: colors.text }]}>{progress?.currentStreak || 0}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Day Streak</Text>
+          </View>
         </View>
 
-        <View style={styles.statCard}>
-          <Image
-            source={require("../../assets/trophy.png")}
-            style={styles.statIconImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.statLabel}>Total Points</Text>
-          <Text style={styles.statValue}>{progress?.totalPoints || 0}</Text>
-          <Text style={styles.statHint}>Points earned</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+          <View style={[styles.statIconWrapper, { backgroundColor: colors.primaryLight }]}>
+            <Image
+              source={require("../../assets/trophy.png")}
+              style={styles.statIconImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statValue, { color: colors.text }]}>{progress?.totalPoints || 0}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Points</Text>
+          </View>
         </View>
 
-        <View style={styles.statCard}>
-          <Image
-            source={require("../../assets/bullseye.png")}
-            style={styles.statIconImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.statLabel}>Completed</Text>
-          <Text style={styles.statValue}>
-            {progress?.totalChallengesCompleted || 0}
-          </Text>
-          <Text style={styles.statHint}>Challenges done</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
+          <View style={[styles.statIconWrapper, { backgroundColor: colors.primaryLight }]}>
+            <Image
+              source={require("../../assets/bullseye.png")}
+              style={styles.statIconImage}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statValue, { color: colors.text }]}>
+              {progress?.totalChallengesCompleted || 0}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Completed</Text>
+          </View>
         </View>
       </View>
 
       <View style={styles.featuredHeader}>
-        <Text style={styles.sectionTitle}>Today's Challenge</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Challenge</Text>
         <TouchableOpacity>
-          <Text style={styles.viewAll}>View All</Text>
+          <Text style={[styles.viewAll, { color: colors.primary }]}>View All</Text>
         </TouchableOpacity>
       </View>
 
       {featuredChallenge && (
-        <View style={styles.featuredCard}>
+        <View style={[styles.featuredCard, { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder }]}>
           <View style={styles.featuredTitleRow}>
             <View style={styles.featuredIconContainer}>
               <Image
@@ -191,10 +205,10 @@ export default function HomeScreen({ navigation }: any) {
               />
             </View>
             <View style={styles.featuredTitleSection}>
-              <Text style={styles.featuredTitle}>
+              <Text style={[styles.featuredTitle, { color: colors.text }]}>
                 {featuredChallenge.title}
               </Text>
-              <Text style={styles.featuredCategory}>
+              <Text style={[styles.featuredCategory, { color: colors.textSecondary }]}>
                 {categoryConfig[featuredChallenge.category as ChallengeCategory]
                   ?.label || featuredChallenge.category}
               </Text>
@@ -210,18 +224,18 @@ export default function HomeScreen({ navigation }: any) {
               </Text>
             </View>
           </View>
-          <Text style={styles.featuredDescription}>
+          <Text style={[styles.featuredDescription, { color: colors.textSecondary }]}>
             {featuredChallenge.description}
           </Text>
           <View style={styles.featuredMeta}>
-            <Text style={styles.featuredMetaItem}>
+            <Text style={[styles.featuredMetaItem, { color: colors.textMuted }]}>
               {featuredChallenge.points} points
             </Text>
-            <Text style={styles.featuredMetaSeparator}>•</Text>
-            <Text style={styles.featuredMetaItem}>2 minutes</Text>
+            <Text style={[styles.featuredMetaSeparator, { color: colors.textMuted }]}>•</Text>
+            <Text style={[styles.featuredMetaItem, { color: colors.textMuted }]}>2 minutes</Text>
           </View>
           <TouchableOpacity
-            style={styles.startButton}
+            style={[styles.startButton, { backgroundColor: colors.primary }]}
             onPress={handleStartChallenge}
           >
             <Text style={styles.startButtonText}>Start Challenge</Text>
@@ -231,7 +245,7 @@ export default function HomeScreen({ navigation }: any) {
       )}
 
       {/* EXPLORE CATEGORIES – assets ikonları */}
-      <Text style={styles.sectionTitle}>Explore Categories</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>Explore Categories</Text>
       <View style={styles.categoriesGrid}>
         {Object.entries(categoryConfig).map(([key, config]) => {
           const subtitle = categorySubtitles[key] || "";
@@ -240,20 +254,23 @@ export default function HomeScreen({ navigation }: any) {
               key={key}
               style={[
                 styles.categoryCard,
-                { backgroundColor: getCategoryColor(key) },
+                { 
+                  backgroundColor: isDark ? colors.surfaceSecondary : getCategoryColor(key),
+                  borderColor: colors.cardBorder,
+                },
               ]}
               onPress={() => handleCategoryPress(key as ChallengeCategory)}
             >
-              <View style={styles.categoryIconWrapper}>
+              <View style={[styles.categoryIconWrapper, { backgroundColor: isDark ? colors.background : 'transparent' }]}>
                 <Image
                   source={getCategoryIconSource(key)}
                   style={styles.categoryIconImage}
                   resizeMode="contain"
                 />
               </View>
-              <Text style={styles.categoryName}>{config.label}</Text>
+              <Text style={[styles.categoryName, { color: colors.text }]}>{config.label}</Text>
               {!!subtitle && (
-                <Text style={styles.categoryDescription}>{subtitle}</Text>
+                <Text style={[styles.categoryDescription, { color: colors.textSecondary }]}>{subtitle}</Text>
               )}
             </TouchableOpacity>
           );
@@ -300,6 +317,7 @@ const styles = StyleSheet.create({
   },
 
   /* STATS */
+  /* STATS */
   statsRow: {
     flexDirection: "row",
     gap: 12,
@@ -307,30 +325,48 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#e0e7ff",
+    shadowColor: "#667eea",
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  statIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "#c7d2fe",
   },
   statIconImage: {
-    width: 32,
-    height: 32,
-    marginBottom: 8,
+    width: 28,
+    height: 28,
   },
-  statLabel: {
-    fontSize: 11,
-    color: "#64748b",
-    marginBottom: 4,
+  statContent: {
+    alignItems: "center",
   },
   statValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1e293b",
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#5B4DC3",
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
-  statHint: {
-    fontSize: 11,
-    color: "#94a3b8",
+  statLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "600",
+    textAlign: "center",
   },
 
   featuredHeader: {

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { ChallengeCategory } from '../types';
 
 const categories: { value: ChallengeCategory; label: string; icon: string }[] = [
@@ -33,6 +34,7 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const { updateOnboarding } = useAuth();
+  const { colors, isDark } = useTheme();
 
   const [preferences, setPreferences] = useState<{
     preferredCategories: ChallengeCategory[];
@@ -90,22 +92,22 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.logo}>⚡</Text>
-          <Text style={styles.title}>Personalize Your Journey</Text>
-          <Text style={styles.subtitle}>Step {step} of 3</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Personalize Your Journey</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Step {step} of 3</Text>
         </View>
 
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${(step / 3) * 100}%` }]} />
+        <View style={[styles.progressBar, { backgroundColor: colors.progressBackground }]}>
+          <View style={[styles.progressFill, { width: `${(step / 3) * 100}%`, backgroundColor: colors.primary }]} />
         </View>
 
         {step === 1 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>What areas interest you?</Text>
-            <Text style={styles.stepSubtitle}>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>What areas interest you?</Text>
+            <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>
               Select the categories you'd like to focus on
             </Text>
             <View style={styles.grid}>
@@ -114,8 +116,11 @@ export default function OnboardingScreen() {
                   key={cat.value}
                   style={[
                     styles.categoryCard,
-                    preferences.preferredCategories.includes(cat.value) &&
-                      styles.categoryCardSelected,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                    preferences.preferredCategories.includes(cat.value) && {
+                      borderColor: colors.primary,
+                      backgroundColor: colors.primaryLight,
+                    },
                   ]}
                   onPress={() => toggleCategory(cat.value)}
                 >
@@ -123,8 +128,10 @@ export default function OnboardingScreen() {
                   <Text
                     style={[
                       styles.categoryLabel,
-                      preferences.preferredCategories.includes(cat.value) &&
-                        styles.categoryLabelSelected,
+                      { color: colors.textSecondary },
+                      preferences.preferredCategories.includes(cat.value) && {
+                        color: colors.primary,
+                      },
                     ]}
                   >
                     {cat.label}
@@ -137,8 +144,8 @@ export default function OnboardingScreen() {
 
         {step === 2 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>When would you like to be reminded?</Text>
-            <Text style={styles.stepSubtitle}>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>When would you like to be reminded?</Text>
+            <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>
               Select your preferred days for challenges
             </Text>
             <View style={styles.daysRow}>
@@ -147,16 +154,21 @@ export default function OnboardingScreen() {
                   key={day.value}
                   style={[
                     styles.dayButton,
-                    preferences.preferredDays.includes(day.value) &&
-                      styles.dayButtonSelected,
+                    { backgroundColor: colors.cardBackground, borderColor: colors.cardBorder },
+                    preferences.preferredDays.includes(day.value) && {
+                      borderColor: colors.primary,
+                      backgroundColor: colors.primary,
+                    },
                   ]}
                   onPress={() => toggleDay(day.value)}
                 >
                   <Text
                     style={[
                       styles.dayLabel,
-                      preferences.preferredDays.includes(day.value) &&
-                        styles.dayLabelSelected,
+                      { color: colors.textSecondary },
+                      preferences.preferredDays.includes(day.value) && {
+                        color: colors.textInverse,
+                      },
                     ]}
                   >
                     {day.label}
@@ -169,19 +181,19 @@ export default function OnboardingScreen() {
 
         {step === 3 && (
           <View style={styles.stepContent}>
-            <Text style={styles.stepTitle}>You're all set!</Text>
-            <Text style={styles.stepSubtitle}>
+            <Text style={[styles.stepTitle, { color: colors.text }]}>You're all set!</Text>
+            <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>
               Get ready to start your 2-minute challenge journey
             </Text>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Your Preferences</Text>
-              <Text style={styles.summaryText}>
+            <View style={[styles.summaryCard, { backgroundColor: colors.cardBackground }]}>
+              <Text style={[styles.summaryTitle, { color: colors.text }]}>Your Preferences</Text>
+              <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
                 Categories:{' '}
                 {preferences.preferredCategories.length > 0
                   ? preferences.preferredCategories.join(', ')
                   : 'All'}
               </Text>
-              <Text style={styles.summaryText}>
+              <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
                 Days:{' '}
                 {preferences.preferredDays.length > 0
                   ? preferences.preferredDays
@@ -194,21 +206,21 @@ export default function OnboardingScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { backgroundColor: colors.cardBackground, borderTopColor: colors.border }]}>
         {step > 1 && (
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>Back</Text>
+          <TouchableOpacity style={[styles.backButton, { backgroundColor: colors.backgroundSecondary }]} onPress={handleBack}>
+            <Text style={[styles.backButtonText, { color: colors.textSecondary }]}>Back</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
-          style={[styles.nextButton, loading && styles.buttonDisabled]}
+          style={[styles.nextButton, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
           onPress={handleNext}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.textInverse} />
           ) : (
-            <Text style={styles.nextButtonText}>
+            <Text style={[styles.nextButtonText, { color: colors.textInverse }]}>
               {step === 3 ? 'Get Started' : 'Next'}
             </Text>
           )}
@@ -221,7 +233,6 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   content: {
     flexGrow: 1,
@@ -239,22 +250,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#64748b',
   },
   progressBar: {
     height: 4,
-    backgroundColor: '#e2e8f0',
     borderRadius: 2,
     marginBottom: 32,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#3b82f6',
     borderRadius: 2,
   },
   stepContent: {
@@ -263,12 +270,10 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1e293b',
     marginBottom: 8,
   },
   stepSubtitle: {
     fontSize: 14,
-    color: '#64748b',
     marginBottom: 24,
   },
   grid: {
@@ -278,16 +283,10 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     width: '47%',
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e2e8f0',
-  },
-  categoryCardSelected: {
-    borderColor: '#3b82f6',
-    backgroundColor: '#eff6ff',
   },
   categoryIcon: {
     fontSize: 32,
@@ -296,10 +295,6 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748b',
-  },
-  categoryLabelSelected: {
-    color: '#3b82f6',
   },
   daysRow: {
     flexDirection: 'row',
@@ -309,26 +304,15 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e2e8f0',
-  },
-  dayButtonSelected: {
-    borderColor: '#3b82f6',
-    backgroundColor: '#3b82f6',
   },
   dayLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#64748b',
-  },
-  dayLabelSelected: {
-    color: '#fff',
   },
   summaryCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
     marginTop: 16,
@@ -336,40 +320,33 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
     marginBottom: 12,
   },
   summaryText: {
     fontSize: 14,
-    color: '#64748b',
     marginBottom: 8,
   },
   footer: {
     flexDirection: 'row',
     padding: 20,
     gap: 12,
-    backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
   },
   backButton: {
     flex: 1,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
   },
   backButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#64748b',
   },
   nextButton: {
     flex: 2,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#3b82f6',
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -377,6 +354,5 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
   },
 });
