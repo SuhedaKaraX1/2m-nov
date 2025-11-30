@@ -103,7 +103,7 @@ function CustomDrawerContent(props: any) {
 
   return (
     <DrawerContentScrollView {...props} style={[styles.drawerContent, { backgroundColor: colors.background }]}>
-      <View style={styles.drawerHeader}>
+      <View style={[styles.drawerHeader, { borderBottomColor: colors.border }]}>
         <View style={styles.logoContainer}>
           <Image source={Logo} style={styles.logoIcon} />
         </View>
