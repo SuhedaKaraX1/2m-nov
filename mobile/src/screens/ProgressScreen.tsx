@@ -18,6 +18,7 @@ import {
   categoryConfig,
   ChallengeCategory,
 } from "../types";
+import Svg, { Polyline, Circle } from "react-native-svg";
 
 const { width } = Dimensions.get("window");
 
@@ -49,6 +50,40 @@ const getCategoryIconSource = (category: string) => {
 };
 
 type AnalyticsTab = "daily" | "trends" | "categories";
+
+/** Helpers for pie chart */
+const polarToCartesian = (
+  centerX: number,
+  centerY: number,
+  radius: number,
+  angleInDegrees: number,
+) => {
+  const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
+  return {
+    x: centerX + radius * Math.cos(angleInRadians),
+    y: centerY + radius * Math.sin(angleInRadians),
+  };
+};
+
+const describeArc = (
+  x: number,
+  y: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+) => {
+  const start = polarToCartesian(x, y, radius, endAngle);
+  const end = polarToCartesian(x, y, radius, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+  const d = [
+    `M ${x} ${y}`,
+    `L ${start.x} ${start.y}`,
+    `A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`,
+    "Z",
+  ].join(" ");
+  return d;
+};
 
 export default function ProgressScreen() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
@@ -97,20 +132,31 @@ export default function ProgressScreen() {
 
   // --- Analytics: last 30 days aggregates ---
   const last30DaysData = useMemo(() => {
-    const days: { date: Date; label: string; count: number; points: number }[] =
-      [];
+    const days: {
+      date: Date;
+      label: string; // x-ekseni için kısa gün label'ı (2, 4, 6...)
+      fullLabel: string; // istersen tooltip vs için tam tarih
+      count: number;
+      points: number;
+    }[] = [];
+
     const today = new Date();
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const label = `${d.getDate()}/${d.getMonth() + 1}`;
-      days.push({ date: d, label, count: 0, points: 0 });
+
+      const label = d.getDate().toString(); // SADECE GÜN
+      const fullLabel = d.toLocaleDateString(undefined, {
+        day: "numeric",
+        month: "short",
+      });
+
+      days.push({ date: d, label, fullLabel, count: 0, points: 0 });
     }
 
     history.forEach((h) => {
       if (!h.completedAt) return;
       const d = new Date(h.completedAt);
-      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       const idx = days.findIndex(
         (x) =>
           x.date.getFullYear() === d.getFullYear() &&
@@ -126,10 +172,110 @@ export default function ProgressScreen() {
     return days;
   }, [history]);
 
-  const maxDailyCount = Math.max(1, ...last30DaysData.map((d) => d.count || 0));
-  const maxDailyPoints = Math.max(
+  
+
+  // Y-ticks for Daily Activity (0,2,4,...)
+  // --- Daily charts Y axis ticks ---
+
+  // Daily grafikleri için sabit eksen değerleri (web ile aynı)
+  const DAILY_MAX_Y = 8;
+  const POINTS_MAX_Y = 60;
+
+  const dailyYAxisTicks = [0, 2, 4, 6, 8];
+
+  const pointsYAxisTicks = [0, 10, 20, 30, 40, 50, 60];
+
+
+  // --- Weekly trend: last 12 weeks ---
+  const weeklyTrendData = useMemo(() => {
+    const weeks: {
+      start: Date;
+      end: Date;
+      label: string;
+      challenges: number;
+      points: number;
+    }[] = [];
+    const today = new Date();
+    // Hafta başlangıcı: pazartesi kabul edelim
+    const todayDay = (today.getDay() + 6) % 7; // 0: Pazartesi
+    const currentWeekStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() - todayDay,
+    );
+
+    for (let i = 11; i >= 0; i--) {
+      const start = new Date(currentWeekStart);
+      start.setDate(start.getDate() - i * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      const label = `${start.getDate()}/${start.getMonth() + 1}`;
+      weeks.push({ start, end, label, challenges: 0, points: 0 });
+    }
+
+    history.forEach((h) => {
+      if (!h.completedAt) return;
+      const d = new Date(h.completedAt);
+      weeks.forEach((w) => {
+        if (d >= w.start && d <= w.end) {
+          w.challenges += 1;
+          w.points += h.pointsEarned || 0;
+        }
+      });
+    });
+
+    return weeks;
+  }, [history]);
+
+  const maxWeeklyChallenges = Math.max(
     1,
-    ...last30DaysData.map((d) => d.points || 0),
+    ...weeklyTrendData.map((w) => w.challenges || 0),
+  );
+  const maxWeeklyPoints = Math.max(
+    1,
+    ...weeklyTrendData.map((w) => w.points || 0),
+  );
+
+  // --- Monthly trend: last 12 months ---
+  const monthlyTrendData = useMemo(() => {
+    const months: {
+      year: number;
+      month: number;
+      label: string;
+      challenges: number;
+      points: number;
+    }[] = [];
+    const today = new Date();
+
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const label = date.toLocaleString(undefined, { month: "short" });
+      months.push({ year, month, label, challenges: 0, points: 0 });
+    }
+
+    history.forEach((h) => {
+      if (!h.completedAt) return;
+      const d = new Date(h.completedAt);
+      months.forEach((m) => {
+        if (d.getFullYear() === m.year && d.getMonth() === m.month) {
+          m.challenges += 1;
+          m.points += h.pointsEarned || 0;
+        }
+      });
+    });
+
+    return months;
+  }, [history]);
+
+  const maxMonthlyChallenges = Math.max(
+    1,
+    ...monthlyTrendData.map((m) => m.challenges || 0),
+  );
+  const maxMonthlyPoints = Math.max(
+    1,
+    ...monthlyTrendData.map((m) => m.points || 0),
   );
 
   // Analytics – categories distribution (last 30 days)
@@ -145,6 +291,12 @@ export default function ProgressScreen() {
     });
     return stats;
   }, [history]);
+
+  const categoryEntries = Object.entries(categoryStats);
+  const categoryTotal = categoryEntries.reduce(
+    (acc, [, count]) => acc + count,
+    0,
+  );
 
   // Challenge history tap → expanded item
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -168,6 +320,7 @@ export default function ProgressScreen() {
     >
       {/* HEADER */}
       <View style={styles.header}>
+        <Text style={styles.screenTitle}>Progress</Text>
         <Text style={styles.screenSubtitle}>
           Track your journey and celebrate your achievements
         </Text>
@@ -175,7 +328,21 @@ export default function ProgressScreen() {
 
       {/* OVERVIEW TOP CARDS */}
       <View style={styles.topStatsRow}>
+        {/* Current Streak */}
         <View style={styles.topStatCard}>
+          <View style={styles.topStatIconRow}>
+            <View
+              style={[
+                styles.topStatIconContainer,
+                { backgroundColor: "#fee2e2" },
+              ]}
+            >
+              <Image
+                source={require("../../assets/alarm.png")}
+                style={styles.topStatIcon}
+              />
+            </View>
+          </View>
           <Text style={styles.topStatLabel}>Current Streak</Text>
           <Text style={styles.topStatValue}>
             {progress?.currentStreak || 0}{" "}
@@ -185,12 +352,42 @@ export default function ProgressScreen() {
             Consecutive days with challenges
           </Text>
         </View>
+
+        {/* Total Points */}
         <View style={styles.topStatCard}>
+          <View style={styles.topStatIconRow}>
+            <View
+              style={[
+                styles.topStatIconContainer,
+                { backgroundColor: "#fef3c7" },
+              ]}
+            >
+              <Image
+                source={require("../../assets/progress.png")}
+                style={styles.topStatIcon}
+              />
+            </View>
+          </View>
           <Text style={styles.topStatLabel}>Total Points</Text>
           <Text style={styles.topStatValue}>{progress?.totalPoints || 0}</Text>
           <Text style={styles.topStatHint}>All-time points earned</Text>
         </View>
-        <View style={styles.topStatCard}>
+
+        {/* Challenges Completed */}
+        <View style={styles.topStatCardLast}>
+          <View style={styles.topStatIconRow}>
+            <View
+              style={[
+                styles.topStatIconContainer,
+                { backgroundColor: "#dbeafe" },
+              ]}
+            >
+              <Image
+                source={require("../../assets/nocolorbullseye.png")}
+                style={styles.topStatIcon}
+              />
+            </View>
+          </View>
           <Text style={styles.topStatLabel}>Challenges Completed</Text>
           <Text style={styles.topStatValue}>
             {progress?.totalChallengesCompleted || 0}
@@ -204,46 +401,66 @@ export default function ProgressScreen() {
         <View style={styles.largeCard}>
           <Text style={styles.largeCardTitle}>Personal Best</Text>
           <View style={styles.largeCardRow}>
-            <View>
-              <Text style={styles.largeCardLabel}>Longest Streak</Text>
-              <Text style={styles.largeCardValue}>
-                {progress?.longestStreak || 0} days
-              </Text>
+            <View style={styles.largeCardIconRow}>
+              <View
+                style={[
+                  styles.largeCardIconContainer,
+                  { backgroundColor: "#dcfce7" },
+                ]}
+              >
+                <Image
+                  source={require("../../assets/progress.png")}
+                  style={styles.largeCardIcon}
+                />
+              </View>
+              <View>
+                <Text style={styles.largeCardLabel}>Longest Streak</Text>
+                <Text style={styles.largeCardValue}>
+                  {progress?.longestStreak || 0} days
+                </Text>
+              </View>
             </View>
           </View>
           <View style={styles.largeCardRow}>
-            <View>
-              <Text style={styles.largeCardLabel}>
-                Avg. Points Per Challenge
-              </Text>
-              <Text style={styles.largeCardValue}>
-                {progress?.averagePointsPerChallenge
-                  ? Math.round(progress.averagePointsPerChallenge)
-                  : 0}
-              </Text>
-            </View>
+            <Text style={styles.largeCardLabel}>Avg. Points Per Challenge</Text>
+            <Text style={styles.largeCardValue}>
+              {progress?.averagePointsPerChallenge
+                ? Math.round(progress.averagePointsPerChallenge)
+                : 0}
+            </Text>
           </View>
         </View>
 
-        <View style={styles.largeCard}>
+        <View style={styles.largeCardLast}>
           <Text style={styles.largeCardTitle}>Activity Summary</Text>
           <View style={styles.largeCardRow}>
-            <View>
-              <Text style={styles.largeCardLabel}>Total Challenges</Text>
-              <Text style={styles.largeCardValue}>
-                {progress?.totalChallengesCompleted || 0}
-              </Text>
+            <View style={styles.largeCardIconRow}>
+              <View
+                style={[
+                  styles.largeCardIconContainer,
+                  { backgroundColor: "#e0f2fe" },
+                ]}
+              >
+                <Image
+                  source={require("../../assets/home.png")}
+                  style={styles.largeCardIcon}
+                />
+              </View>
+              <View>
+                <Text style={styles.largeCardLabel}>Total Challenges</Text>
+                <Text style={styles.largeCardValue}>
+                  {progress?.totalChallengesCompleted || 0}
+                </Text>
+              </View>
             </View>
           </View>
           <View style={styles.largeCardRow}>
-            <View>
-              <Text style={styles.largeCardLabel}>Last Completed</Text>
-              <Text style={styles.largeCardValue}>
-                {history[0]?.completedAt
-                  ? new Date(history[0].completedAt).toLocaleDateString()
-                  : "-"}
-              </Text>
-            </View>
+            <Text style={styles.largeCardLabel}>Last Completed</Text>
+            <Text style={styles.largeCardValue}>
+              {history[0]?.completedAt
+                ? new Date(history[0].completedAt).toLocaleDateString()
+                : "-"}
+            </Text>
           </View>
         </View>
       </View>
@@ -371,6 +588,19 @@ export default function ProgressScreen() {
         {/* Analytics summary cards */}
         <View style={styles.analyticsSummaryRow}>
           <View style={styles.analyticsSummaryCard}>
+            <View style={styles.analyticsSummaryHeaderRow}>
+              <View
+                style={[
+                  styles.analyticsSummaryIconContainer,
+                  { backgroundColor: "#e0f2fe" },
+                ]}
+              >
+                <Image
+                  source={require("../../assets/progress.png")}
+                  style={styles.analyticsSummaryIcon}
+                />
+              </View>
+            </View>
             <Text style={styles.analyticsSummaryLabel}>Total Challenges</Text>
             <Text style={styles.analyticsSummaryValue}>
               {progress?.totalChallengesCompleted || 0}
@@ -379,18 +609,44 @@ export default function ProgressScreen() {
               Completed challenges
             </Text>
           </View>
+
           <View style={styles.analyticsSummaryCard}>
+            <View style={styles.analyticsSummaryHeaderRow}>
+              <View
+                style={[
+                  styles.analyticsSummaryIconContainer,
+                  { backgroundColor: "#fef3c7" },
+                ]}
+              >
+                <Image
+                  source={require("../../assets/journal.png")}
+                  style={styles.analyticsSummaryIcon}
+                />
+              </View>
+            </View>
             <Text style={styles.analyticsSummaryLabel}>Last 30 Days</Text>
             <Text style={styles.analyticsSummaryValue}>
-              {
-                last30DaysData.reduce((acc, d) => acc + (d.count || 0), 0) // sum
-              }
+              {last30DaysData.reduce((acc, d) => acc + (d.count || 0), 0)}
             </Text>
             <Text style={styles.analyticsSummaryHint}>
               Challenges completed
             </Text>
           </View>
-          <View style={styles.analyticsSummaryCard}>
+
+          <View style={styles.analyticsSummaryCardLast}>
+            <View style={styles.analyticsSummaryHeaderRow}>
+              <View
+                style={[
+                  styles.analyticsSummaryIconContainer,
+                  { backgroundColor: "#fee2e2" },
+                ]}
+              >
+                <Image
+                  source={require("../../assets/settings.png")}
+                  style={styles.analyticsSummaryIcon}
+                />
+              </View>
+            </View>
             <Text style={styles.analyticsSummaryLabel}>Categories</Text>
             <Text style={styles.analyticsSummaryValue}>
               {Object.keys(categoryStats).length}
@@ -429,138 +685,375 @@ export default function ProgressScreen() {
         {/* Tab contents */}
         {analyticsTab === "daily" && (
           <>
+            {/* DAILY ACTIVITY */}
             <Text style={styles.analyticsChartTitle}>
               Daily Activity (Last 30 Days)
             </Text>
+            <Text style={styles.analyticsChartSubtitle}>
+              Number of challenges completed each day
+            </Text>
+
             <View style={styles.chartContainer}>
-              <View style={styles.chartBarsRow}>
-                {last30DaysData.map((d, idx) => {
-                  const h = (d.count / maxDailyCount) * 100 || 2;
-                  return (
-                    <View key={idx} style={styles.chartBarWrapper}>
-                      <View style={[styles.chartBar, { height: `${h}%` }]} />
-                    </View>
-                  );
-                })}
+              <View style={styles.chartRow}>
+                {/* Y Axis */}
+                <View style={styles.chartYAxis}>
+                  {dailyYAxisTicks
+                    .slice()
+                    .reverse()
+                    .map((v) => (
+                      <Text key={v} style={styles.chartYAxisLabel}>
+                        {v}
+                      </Text>
+                    ))}
+                </View>
+
+                {/* Bars + X Axis */}
+                <View style={styles.chartMainArea}>
+                  {/* barlar */}
+                  <View style={styles.chartBarsRow}>
+                    {last30DaysData.map((d, idx) => {
+                      //const h = (d.count / maxDailyCount) * 100 || 2;
+                      return (
+                        <View key={idx} style={styles.chartBarGroup}>
+                          <View
+                            style={[
+                              styles.chartBar,
+                              //{ height: `${h}%`, backgroundColor: "#3b82f6" },
+                            ]}
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* alt çizgi */}
+                  <View style={styles.chartBottomAxis} />
+
+                  {/* tarih etiketleri */}
+                  <View style={styles.chartXAxis}>
+                    {last30DaysData.map((d, idx) => (
+                      <Text key={idx} style={styles.chartXAxisLabel}>
+                        {idx % 4 === 0 ? d.label : ""}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
               </View>
-              <View style={styles.chartBottomAxis} />
             </View>
 
+            {/* POINTS EARNED */}
             <Text style={[styles.analyticsChartTitle, { marginTop: 16 }]}>
               Points Earned (Last 30 Days)
             </Text>
+            <Text style={styles.analyticsChartSubtitle}>
+              Points accumulated each day
+            </Text>
+
             <View style={styles.chartContainer}>
-              <View style={styles.chartBarsRow}>
-                {last30DaysData.map((d, idx) => {
-                  const h = (d.points / maxDailyPoints) * 100 || 2;
-                  return (
-                    <View key={idx} style={styles.chartBarWrapper}>
-                      <View
-                        style={[
-                          styles.chartBar,
-                          { height: `${h}%`, backgroundColor: "#38bdf8" },
-                        ]}
-                      />
-                    </View>
-                  );
-                })}
+              <View style={styles.chartRow}>
+                {/* Y Axis */}
+                <View style={styles.chartYAxis}>
+                  {pointsYAxisTicks
+                    .slice()
+                    .reverse()
+                    .map((v) => (
+                      <Text key={v} style={styles.chartYAxisLabel}>
+                        {v}
+                      </Text>
+                    ))}
+                </View>
+
+                {/* Line chart + X Axis */}
+                <View style={styles.chartMainArea}>
+                  {/* line + noktalar */}
+                  <View style={styles.chartLineWrapper}>
+                    <Svg width="100%" height={120} viewBox="0 0 300 120">
+                      {(() => {
+                        const chartHeight = 100;
+                        const chartWidth =
+                          last30DaysData.length > 1
+                            ? last30DaysData.length - 1
+                            : 1;
+            
+                        const points = last30DaysData.map((d, i) => {
+                          const x = (i / chartWidth) * 300;
+                          const pointsClamped = Math.min(d.points, POINTS_MAX_Y);
+                          const y =
+                            chartHeight -
+                              (pointsClamped / POINTS_MAX_Y) * chartHeight ||
+                            chartHeight;
+                          return { x, y: y + 10 };
+                        });
+
+                        const polylinePoints = points
+                          .map((p) => `${p.x},${p.y}`)
+                          .join(" ");
+
+                        return (
+                          <>
+                            <Polyline
+                              points={polylinePoints}
+                              fill="none"
+                              stroke="#3b82f6"
+                              strokeWidth={2}
+                            />
+                            {points.map((p, idx) => (
+                              <Circle
+                                key={idx}
+                                cx={p.x}
+                                cy={p.y}
+                                r={3}
+                                fill="#3b82f6"
+                              />
+                            ))}
+                          </>
+                        );
+                      })()}
+                    </Svg>
+                  </View>
+
+                  {/* alt çizgi */}
+                  <View style={styles.chartBottomAxis} />
+
+                  {/* tarih etiketleri */}
+                  <View style={styles.chartXAxis}>
+                    {last30DaysData.map((d, idx) => {
+                      const countClamped = Math.min(d.count, DAILY_MAX_Y);
+                      const h = (countClamped / DAILY_MAX_Y) * 100 || 2;
+                      return (
+                        <View key={idx} style={styles.chartBarGroup}>
+                          <View
+                            style={[
+                              styles.chartBar,
+                              { height: `${h}%`, backgroundColor: "#3b82f6" },
+                            ]}
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
               </View>
-              <View style={styles.chartBottomAxis} />
             </View>
           </>
         )}
 
         {analyticsTab === "trends" && (
-          <View style={styles.trendsContainer}>
-            <Text style={styles.trendTitle}>Streak Comparison</Text>
-            <View style={styles.trendBarsRow}>
-              <View style={styles.trendBarItem}>
-                <Text style={styles.trendLabel}>Current</Text>
-                <View style={styles.trendBarBg}>
-                  <View
-                    style={[
-                      styles.trendBarFill,
-                      {
-                        width: `${
-                          ((progress?.currentStreak || 0) /
-                            Math.max(
-                              progress?.longestStreak || 1,
-                              progress?.currentStreak || 1,
-                            )) *
-                          100
-                        }%`,
-                      },
-                    ]}
-                  />
+          <>
+            {/* Weekly Trend */}
+            <Text style={styles.analyticsChartTitle}>Weekly Trend</Text>
+            <Text style={styles.analyticsChartSubtitle}>
+              Challenge completion over the last 12 weeks
+            </Text>
+            <View style={styles.chartContainer}>
+              <View style={styles.chartRow}>
+                <View style={styles.chartYAxis}>
+                  {/* sadece basit 0 ve max için */}
+                  <Text style={styles.chartYAxisLabel}>
+                    {Math.max(maxWeeklyChallenges, maxWeeklyPoints)}
+                  </Text>
+                  <Text style={styles.chartYAxisLabel}>0</Text>
                 </View>
-                <Text style={styles.trendValue}>
-                  {progress?.currentStreak || 0} days
-                </Text>
+                <View style={styles.chartMainArea}>
+                  <View style={styles.chartBarsRow}>
+                    {weeklyTrendData.map((w, idx) => {
+                      const hChallenges =
+                        (w.challenges / maxWeeklyChallenges) * 100 || 2;
+                      const hPoints = (w.points / maxWeeklyPoints) * 100 || 2;
+                      return (
+                        <View key={idx} style={styles.chartBarGroup}>
+                          <View
+                            style={[
+                              styles.chartBar,
+                              {
+                                height: `${hChallenges}%`,
+                                backgroundColor: "#3b82f6",
+                              },
+                            ]}
+                          />
+                          <View
+                            style={[
+                              styles.chartBar,
+                              {
+                                height: `${hPoints}%`,
+                                backgroundColor: "#ec4899",
+                                marginTop: 2,
+                              },
+                            ]}
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
+                  <View style={styles.chartBottomAxis} />
+                  <View style={styles.chartXAxis}>
+                    {weeklyTrendData.map((w, idx) => (
+                      <Text key={idx} style={styles.chartXAxisLabel}>
+                        {idx % 3 === 0 ? w.label : ""}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
               </View>
-              <View style={styles.trendBarItem}>
-                <Text style={styles.trendLabel}>Longest</Text>
-                <View style={styles.trendBarBg}>
+              {/* Legend */}
+              <View style={styles.chartLegendRow}>
+                <View style={styles.chartLegendItem}>
                   <View
                     style={[
-                      styles.trendBarFill,
-                      {
-                        width: "100%",
-                        backgroundColor: "#22c55e",
-                      },
+                      styles.chartLegendDot,
+                      { backgroundColor: "#3b82f6" },
                     ]}
                   />
+                  <Text style={styles.chartLegendText}>Challenges</Text>
                 </View>
-                <Text style={styles.trendValue}>
-                  {progress?.longestStreak || 0} days
-                </Text>
+                <View style={styles.chartLegendItem}>
+                  <View
+                    style={[
+                      styles.chartLegendDot,
+                      { backgroundColor: "#ec4899" },
+                    ]}
+                  />
+                  <Text style={styles.chartLegendText}>Points</Text>
+                </View>
               </View>
             </View>
-          </View>
+
+            {/* Monthly Trend */}
+            <Text style={[styles.analyticsChartTitle, { marginTop: 16 }]}>
+              Monthly Trend
+            </Text>
+            <Text style={styles.analyticsChartSubtitle}>
+              Challenge completion over the last 12 months
+            </Text>
+            <View style={styles.chartContainer}>
+              <View style={styles.chartRow}>
+                <View style={styles.chartYAxis}>
+                  <Text style={styles.chartYAxisLabel}>
+                    {Math.max(maxMonthlyChallenges, maxMonthlyPoints)}
+                  </Text>
+                  <Text style={styles.chartYAxisLabel}>0</Text>
+                </View>
+                <View style={styles.chartMainArea}>
+                  <View style={styles.chartBarsRow}>
+                    {monthlyTrendData.map((m, idx) => {
+                      const hChallenges =
+                        (m.challenges / maxMonthlyChallenges) * 100 || 2;
+                      const hPoints = (m.points / maxMonthlyPoints) * 100 || 2;
+                      return (
+                        <View key={idx} style={styles.chartBarGroup}>
+                          <View
+                            style={[
+                              styles.chartBar,
+                              {
+                                height: `${hChallenges}%`,
+                                backgroundColor: "#3b82f6",
+                              },
+                            ]}
+                          />
+                          <View
+                            style={[
+                              styles.chartBar,
+                              {
+                                height: `${hPoints}%`,
+                                backgroundColor: "#ec4899",
+                                marginTop: 2,
+                              },
+                            ]}
+                          />
+                        </View>
+                      );
+                    })}
+                  </View>
+                  <View style={styles.chartBottomAxis} />
+                  <View style={styles.chartXAxis}>
+                    {monthlyTrendData.map((m, idx) => (
+                      <Text key={idx} style={styles.chartXAxisLabel}>
+                        {m.label}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              </View>
+              <View style={styles.chartLegendRow}>
+                <View style={styles.chartLegendItem}>
+                  <View
+                    style={[
+                      styles.chartLegendDot,
+                      { backgroundColor: "#3b82f6" },
+                    ]}
+                  />
+                  <Text style={styles.chartLegendText}>Challenges</Text>
+                </View>
+                <View style={styles.chartLegendItem}>
+                  <View
+                    style={[
+                      styles.chartLegendDot,
+                      { backgroundColor: "#ec4899" },
+                    ]}
+                  />
+                  <Text style={styles.chartLegendText}>Points</Text>
+                </View>
+              </View>
+            </View>
+          </>
         )}
 
         {analyticsTab === "categories" && (
           <View style={styles.categoriesAnalyticsContainer}>
-            {Object.keys(categoryStats).length === 0 ? (
+            {categoryEntries.length === 0 ? (
               <Text style={styles.emptyTextSmall}>
                 No category data yet. Complete some challenges first.
               </Text>
             ) : (
-              Object.entries(categoryStats).map(([cat, count]) => {
-                const color =
-                  categoryConfig[cat as ChallengeCategory]?.color || "#3b82f6";
-                const label =
-                  categoryConfig[cat as ChallengeCategory]?.label || cat;
-                const maxCat = Math.max(...Object.values(categoryStats), 1);
-                return (
-                  <View key={cat} style={styles.categoryAnalyticsRow}>
-                    <View style={styles.categoryAnalyticsLeft}>
-                      <Image
-                        source={getCategoryIconSource(cat)}
-                        style={styles.categoryAnalyticsIcon}
-                      />
-                      <View>
-                        <Text style={styles.categoryAnalyticsLabel}>
-                          {label}
-                        </Text>
-                        <Text style={styles.categoryAnalyticsCount}>
-                          {count} challenges
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.categoryAnalyticsBarBg}>
-                      <View
-                        style={[
-                          styles.categoryAnalyticsBarFill,
-                          {
-                            width: `${(count / maxCat) * 100}%`,
-                            backgroundColor: color,
-                          },
-                        ]}
-                      />
-                    </View>
+              <>
+                <Text style={styles.analyticsChartTitle}>
+                  Category Distribution
+                </Text>
+                <View style={styles.pieRow}>
+                  <Svg width={160} height={160} viewBox="0 0 160 160">
+                    {(() => {
+                      let startAngle = 0;
+                      return categoryEntries.map(([cat, count]) => {
+                        const value = (count / categoryTotal) * 360;
+                        const endAngle = startAngle + value;
+                        const color =
+                          categoryConfig[cat as ChallengeCategory]?.color ||
+                          "#3b82f6";
+                        const d = describeArc(80, 80, 70, startAngle, endAngle);
+                        startAngle = endAngle;
+                        return <Path key={cat} d={d} fill={color} />;
+                      });
+                    })()}
+                  </Svg>
+                  <View style={styles.pieLegend}>
+                    <Text style={styles.pieLegendTitle}>
+                      Category Breakdown
+                    </Text>
+                    {categoryEntries.map(([cat, count]) => {
+                      const config = categoryConfig[cat as ChallengeCategory];
+                      const color = config?.color || "#3b82f6";
+                      const label = config?.label || cat;
+                      const percent = Math.round((count / categoryTotal) * 100);
+                      return (
+                        <View key={cat} style={styles.pieLegendItem}>
+                          <View
+                            style={[
+                              styles.pieLegendDot,
+                              { backgroundColor: color },
+                            ]}
+                          />
+                          <View>
+                            <Text style={styles.pieLegendLabel}>{label}</Text>
+                            <Text style={styles.pieLegendText}>
+                              {count} • {percent}%
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })}
                   </View>
-                );
-              })
+                </View>
+              </>
             )}
           </View>
         )}
@@ -695,6 +1188,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
+  topStatCardLast: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  topStatIconRow: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginBottom: 10,
+  },
+  topStatIconContainer: {
+    width: 30,
+    height: 30,
+    borderRadius: 999,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  topStatIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: "contain",
+  },
   topStatLabel: {
     fontSize: 12,
     color: "#6b7280",
@@ -730,6 +1248,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
+  largeCardLast: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
   largeCardTitle: {
     fontSize: 15,
     fontWeight: "600",
@@ -748,6 +1274,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
     marginTop: 2,
+  },
+  largeCardIconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  largeCardIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  largeCardIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: "contain",
   },
 
   // Section generic
@@ -954,6 +1497,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
+  analyticsSummaryCardLast: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  analyticsSummaryHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginBottom: 6,
+  },
+  analyticsSummaryIconContainer: {
+    width: 26,
+    height: 26,
+    borderRadius: 999,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  analyticsSummaryIcon: {
+    width: 16,
+    height: 16,
+    resizeMode: "contain",
+  },
   analyticsSummaryLabel: {
     fontSize: 11,
     color: "#6b7280",
@@ -1000,8 +1568,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#111827",
+    marginBottom: 2,
+  },
+  analyticsChartSubtitle: {
+    fontSize: 11,
+    color: "#9ca3af",
     marginBottom: 6,
   },
+
   chartContainer: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
@@ -1009,13 +1583,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: "#e5e7eb",
+    marginBottom: 4,
+  },
+  chartRow: {
+    flexDirection: "row",
+  },
+  chartYAxis: {
+    width: 26,
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    paddingRight: 4,
+  },
+  chartYAxisLabel: {
+    fontSize: 10,
+    color: "#9ca3af",
+  },
+  chartMainArea: {
+    flex: 1,
   },
   chartBarsRow: {
     height: 120,
     flexDirection: "row",
     alignItems: "flex-end",
   },
-  chartBarWrapper: {
+  chartBarGroup: {
     flex: 1,
     marginHorizontal: 1,
     justifyContent: "flex-end",
@@ -1023,59 +1614,44 @@ const styles = StyleSheet.create({
   chartBar: {
     width: "100%",
     borderRadius: 999,
-    backgroundColor: "#3b82f6",
   },
   chartBottomAxis: {
     height: 1,
     backgroundColor: "#e5e7eb",
     marginTop: 6,
   },
-
-  // Trends tab
-  trendsContainer: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  trendTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0f172a",
-    marginBottom: 10,
-  },
-  trendBarsRow: {
+  chartXAxis: {
     flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  trendBarItem: {
-    flex: 1,
-    marginRight: 10,
-  },
-  trendLabel: {
-    fontSize: 12,
-    color: "#6b7280",
-    marginBottom: 4,
-  },
-  trendBarBg: {
-    height: 12,
-    backgroundColor: "#e5e7eb",
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  trendBarFill: {
-    height: "100%",
-    backgroundColor: "#3b82f6",
-    borderRadius: 999,
-  },
-  trendValue: {
-    fontSize: 12,
-    color: "#111827",
     marginTop: 4,
   },
+  chartXAxisLabel: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 9,
+    color: "#9ca3af",
+  },
+  chartLegendRow: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginTop: 8,
+  },
+  chartLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  chartLegendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 4,
+  },
+  chartLegendText: {
+    fontSize: 11,
+    color: "#6b7280",
+  },
 
-  // Categories analytics
+  // Categories analytics (pie)
   categoriesAnalyticsContainer: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
@@ -1083,41 +1659,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5e7eb",
   },
-  categoryAnalyticsRow: {
+  pieRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginTop: 8,
   },
-  categoryAnalyticsLeft: {
-    flexDirection: "row",
-    alignItems: "center",
+  pieLegend: {
     flex: 1,
+    marginLeft: 12,
   },
-  categoryAnalyticsIcon: {
-    width: 26,
-    height: 26,
-    marginRight: 8,
+  pieLegendTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: 6,
   },
-  categoryAnalyticsLabel: {
-    fontSize: 13,
+  pieLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  pieLegendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 6,
+  },
+  pieLegendLabel: {
+    fontSize: 12,
     fontWeight: "600",
     color: "#111827",
   },
-  categoryAnalyticsCount: {
+  pieLegendText: {
     fontSize: 11,
     color: "#6b7280",
-  },
-  categoryAnalyticsBarBg: {
-    flex: 1,
-    height: 8,
-    backgroundColor: "#e5e7eb",
-    borderRadius: 999,
-    overflow: "hidden",
-    marginLeft: 8,
-  },
-  categoryAnalyticsBarFill: {
-    height: "100%",
-    borderRadius: 999,
   },
 
   // History

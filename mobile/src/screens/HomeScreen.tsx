@@ -16,6 +16,7 @@ import {
   categoryConfig,
   ChallengeCategory,
 } from "../types";
+import Logo from "../../assets/logo.jpg";
 
 export default function HomeScreen({ navigation }: any) {
   const [progress, setProgress] = useState<UserProgress | null>(null);
@@ -127,7 +128,7 @@ export default function HomeScreen({ navigation }: any) {
     >
       <View style={styles.header}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logoIcon}>⚡</Text>
+          <Image source={Logo} style={styles.logoIcon} />
         </View>
         <Text style={styles.title}>2Mins</Text>
       </View>
@@ -284,13 +285,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#3b82f6",
-    justifyContent: "center",
-    alignItems: "center",
+    overflow: "hidden", // ✔ en kritik kısım
     marginRight: 12,
   },
   logoIcon: {
-    fontSize: 24,
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   title: {
     fontSize: 28,
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
   },
   viewAll: {
     fontSize: 14,
-    color: "#3b82f6",
+    color: "#3c7c82",
     fontWeight: "600",
   },
   featuredCard: {
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
     color: "#cbd5e1",
   },
   startButton: {
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#3c7c82",
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,

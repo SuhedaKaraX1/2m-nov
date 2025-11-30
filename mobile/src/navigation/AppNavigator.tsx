@@ -1,4 +1,3 @@
-import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import {
@@ -13,6 +12,7 @@ import {
   Text,
   TouchableOpacity,
   Image,
+  ImageSourcePropType,
 } from "react-native";
 
 import LoginScreen from "../screens/LoginScreen";
@@ -30,6 +30,9 @@ import JournalScreen from "../screens/JournalScreen";
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
+
+// Logo kaynağını tanımla
+const Logo: ImageSourcePropType = require("../../assets/logo.jpg");
 
 // Drawer’da kullanılacak navigation item’ları
 const navigationItems = [
@@ -98,7 +101,7 @@ function CustomDrawerContent(props: any) {
     <DrawerContentScrollView {...props} style={styles.drawerContent}>
       <View style={styles.drawerHeader}>
         <View style={styles.logoContainer}>
-          <Text style={styles.logoIcon}>⚡</Text>
+          <Image source={Logo} style={styles.logoIcon} />
         </View>
         <Text style={styles.drawerTitle}>2Mins Challenge</Text>
       </View>
@@ -340,16 +343,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   logoContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#3b82f6",
-    justifyContent: "center",
-    alignItems: "center",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: "hidden",
     marginRight: 12,
   },
   logoIcon: {
-    fontSize: 20,
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   drawerTitle: {
     fontSize: 16,

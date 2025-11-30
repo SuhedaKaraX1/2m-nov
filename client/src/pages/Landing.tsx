@@ -45,6 +45,70 @@ export default function Landing() {
         </div>
       </div>
 
+      {/* User Discovery Questions Section */}
+      <div className="max-w-5xl mx-auto px-4 py-16">
+        <h2 className="text-3xl font-bold text-center mb-12">
+          Get to Know Yourself
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card className="hover-elevate">
+            <CardContent className="p-6 space-y-3">
+              <h3 className="text-xl font-semibold">What is your main goal?</h3>
+              <p className="text-muted-foreground">
+                Identify whether you're aiming for fitness, emotional balance,
+                financial stability, or personal growth.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover-elevate">
+            <CardContent className="p-6 space-y-3">
+              <h3 className="text-xl font-semibold">
+                How much time can you commit each day?
+              </h3>
+              <p className="text-muted-foreground">
+                Choose between light, moderate, or intense routines tailored to
+                your schedule.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover-elevate">
+            <CardContent className="p-6 space-y-3">
+              <h3 className="text-xl font-semibold">
+                What motivates you most?
+              </h3>
+              <p className="text-muted-foreground">
+                Progress, rewards, streaks, learning, or becoming your best self
+                — tell us what drives you.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover-elevate">
+            <CardContent className="p-6 space-y-3">
+              <h3 className="text-xl font-semibold">Where do you struggle?</h3>
+              <p className="text-muted-foreground">
+                Focus, consistency, fatigue, stress, or discipline — your answer
+                helps us personalize your journey.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover-elevate">
+            <CardContent className="p-6 space-y-3">
+              <h3 className="text-xl font-semibold">
+                What excites you the most?
+              </h3>
+              <p className="text-muted-foreground">
+                Quick wins, gamification, challenges, learning, or building
+                long-term habits.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Features Grid */}
       <div className="max-w-6xl mx-auto px-4 py-16">
         <h2 className="text-3xl font-bold text-center mb-12">
